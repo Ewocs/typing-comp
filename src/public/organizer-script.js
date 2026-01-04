@@ -5,6 +5,20 @@ let rounds = [];
 let competitionCode = null;
 let completedRounds = new Set();
 
+// Check authentication
+const authToken = localStorage.getItem('authToken');
+if (!authToken) {
+  window.location.href = '/login';
+}
+
+// Helper function to get auth headers
+function getAuthHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${authToken}`
+  };
+}
+
 // DOM Elements
 const compNameInput = document.getElementById('compName');
 const compDescriptionInput = document.getElementById('compDescription');
@@ -100,7 +114,7 @@ createCompBtn.addEventListener('click', async () => {
   try {
     const response = await fetch('/api/create', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ 
         name: compName, 
         description: compDescription,
@@ -109,6 +123,13 @@ createCompBtn.addEventListener('click', async () => {
     });
 
     const data = await response.json();
+
+    if (response.status === 401) {
+      alert('Session expired. Please login again.');
+      localStorage.clear();
+      window.location.href = '/login';
+      return;
+    }
 
     if (data.success) {
       competitionId = data.competitionId;
@@ -324,4 +345,18 @@ socket.on('error', (data) => {
 
 socket.on('disconnect', () => {
   console.log('Disconnected from server');
+});
+
+// Display organizer name
+const organizerName = localStorage.getItem('organizerName');
+if (organizerName) {
+  document.getElementById('organizerName').textContent = organizerName;
+}
+
+// Logout functionality
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  if (confirm('Are you sure you want to logout?')) {
+    localStorage.clear();
+    window.location.href = '/login';
+  }
 });

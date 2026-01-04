@@ -4,6 +4,7 @@ const CompetitionSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   code: { type: String, required: true, unique: true, uppercase: true },
   organizer: { type: String, default: 'Admin' },
+  organizerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organizer', default: null },
   status: { type: String, enum: ['pending', 'ongoing', 'completed'], default: 'pending' },
   
   rounds: [{

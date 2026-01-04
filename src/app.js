@@ -20,6 +20,7 @@ logger.info('✓ Express app initialized');
 
 
 // Routes
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api', require('./routes/competition'));
 
 // Static files
@@ -33,4 +34,13 @@ app.get("/", (req, res) => {
 app.get('/organizer', (req,res)=>{
   res.sendFile(path.join(__dirname, "./public/organizer.html"));
 })
+
+app.get('/login', (req,res)=>{
+  res.sendFile(path.join(__dirname, "./public/login.html"));
+})
+
+app.get('/register', (req,res)=>{
+  res.sendFile(path.join(__dirname, "./public/register.html"));
+})
+
 module.exports = app;

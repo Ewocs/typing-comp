@@ -1,11 +1,12 @@
 const express = require('express');
 const Competition = require('../models/Competition');
 const generateCode = require('../utils/codeGenerator');
+const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-// CREATE COMPETITION
-router.post('/create', async (req, res) => {
+// CREATE COMPETITION (Protected)
+router.post('/create', auth, async (req, res) => {
   try {
     const { name, description, rounds } = req.body;
     
@@ -19,6 +20,8 @@ router.post('/create', async (req, res) => {
       name,
       description: description || '',
       code,
+      organizerId: req.organizer.id,
+      organizer: req.organizer.name,
       rounds: rounds.map((r, index) => ({
         roundNumber: index + 1,
         text: r.text,
@@ -73,6 +76,27 @@ router.get('/competition/:code', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch competition' });
+  }
+});
+
+// GET MY COMPETITIONS (Protected)
+router.get('/my-competitions', auth, async (req, res) => {
+  try {
+    const competitions = await Competition.find({ 
+      organizerId: req.organizer.id 
+    })
+    .select('name code status currentRound totalRounds createdAt participants')
+    .sort({ createdAt: -1 })
+    .limit(50);
+    
+    res.json({ 
+      success: true, 
+      competitions,
+      count: competitions.length
+    });
+  } catch (error) {
+    console.error('Fetch competitions error:', error);
+    res.status(500).json({ error: 'Failed to fetch competitions' });
   }
 });
 

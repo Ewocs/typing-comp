@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Typing Competition</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .auth-container {
+      max-width: 400px;
+      margin: 80px auto;
+      padding: var(--space-16);
+    }
+    .auth-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-card-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-24);
+    }
+    .auth-title {
+      font-size: var(--font-size-3xl);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-text);
+      margin-bottom: var(--space-8);
+      text-align: center;
+    }
+    .auth-subtitle {
+      color: var(--color-text-secondary);
+      text-align: center;
+      margin-bottom: var(--space-24);
+    }
+    .form-group {
+      margin-bottom: var(--space-16);
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: var(--space-8);
+      color: var(--color-text);
+      font-weight: var(--font-weight-medium);
+    }
+    .form-group input {
+      width: 100%;
+      padding: var(--space-12);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-base);
+      background: var(--color-background);
+      color: var(--color-text);
+      font-size: var(--font-size-base);
+    }
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: var(--focus-ring);
+    }
+    .btn-primary {
+      width: 100%;
+      padding: var(--space-12);
+      background: var(--color-primary);
+      color: var(--color-btn-primary-text);
+      border: none;
+      border-radius: var(--radius-base);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .btn-primary:hover {
+      background: var(--color-primary-hover);
+    }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .error-message {
+      background: rgba(var(--color-error-rgb), 0.1);
+      color: var(--color-error);
+      padding: var(--space-12);
+      border-radius: var(--radius-base);
+      margin-bottom: var(--space-16);
+      font-size: var(--font-size-sm);
+      display: none;
+    }
+    .error-message.show {
+      display: block;
+    }
+    .auth-link {
+      text-align: center;
+      margin-top: var(--space-16);
+      color: var(--color-text-secondary);
+    }
+    .auth-link a {
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: var(--font-weight-medium);
+    }
+    .auth-link a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1 class="auth-title">Organizer Login</h1>
+      <p class="auth-subtitle">Sign in to manage your competitions</p>
+      
+      <div id="errorMessage" class="error-message"></div>
+      
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        
+        <button type="submit" class="btn-primary" id="loginBtn">
+          Login
+        </button>
+      </form>
+      
+      <div class="auth-link">
+        Don't have an account? <a href="/register">Register here</a>
+      </div>
+      
+      <div class="auth-link">
+        <a href="/">Back to home</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+    }
+
+    function hideError() {
+      errorMessage.classList.remove('show');
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError('Please enter email and password');
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Logging in...';
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError(data.error || 'Login failed');
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Login';
+          return;
+        }
+
+        // Store token
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('organizerName', data.organizer.name);
+        localStorage.setItem('organizerEmail', data.organizer.email);
+
+        // Redirect to organizer dashboard
+        window.location.href = '/organizer';
+      } catch (error) {
+        console.error('Login error:', error);
+        showError('Network error. Please try again.');
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+      }
+    });
+  </script>
+</body>
+</html>
