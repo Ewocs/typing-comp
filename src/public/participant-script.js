@@ -12,7 +12,55 @@ let backspaceCount = 0;
 let typedChars = [];
 let errorIndices = new Set();
 
-// DOM Elements
+// ================= RESULT HISTORY HELPERS =================
+function saveResultToHistory(result) {
+  const history =
+    JSON.parse(localStorage.getItem("typingResults")) || [];
+
+  const updatedHistory = [result, ...history].slice(0, 10);
+
+  localStorage.setItem(
+    "typingResults",
+    JSON.stringify(updatedHistory)
+  );
+}
+
+function loadResultHistory() {
+  return JSON.parse(localStorage.getItem("typingResults")) || [];
+}
+
+function clearResultHistory() {
+  localStorage.removeItem("typingResults");
+  renderResultHistory();
+}
+
+function renderResultHistory() {
+  const historyBody = document.getElementById("history-body");
+  if (!historyBody) return;
+
+  const history = loadResultHistory();
+  historyBody.innerHTML = "";
+
+  if (history.length === 0) {
+    historyBody.innerHTML =
+      "<tr><td colspan='5'>No history available</td></tr>";
+    return;
+  }
+
+  history.forEach((item) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${item.date}</td>
+      <td>${item.wpm}</td>
+      <td>${item.accuracy}</td>
+      <td>${item.characters}</td>
+      <td>${item.timeTaken}</td>
+    `;
+    historyBody.appendChild(row);
+  });
+}
+
+// ================= DOM ELEMENTS =================
 const joinScreen = document.getElementById('joinScreen');
 const lobbyScreen = document.getElementById('lobbyScreen');
 const testScreen = document.getElementById('testScreen');
@@ -33,7 +81,7 @@ const timerDisplay = document.getElementById('timerDisplay');
 const focusWarning = document.getElementById('focusWarning');
 const joinNewCompetitionBtn = document.getElementById('joinNewCompetitionBtn');
 
-// ====== Monkeytype style: click on text to focus hidden input ======
+// ====== Monkeytype-style focus ======
 if (textDisplay && typingInput) {
   textDisplay.addEventListener('click', () => {
     typingInput.focus();
@@ -65,7 +113,7 @@ joinBtn.addEventListener('click', () => {
     return;
   }
 
-  if (!name || name.length === 0) {
+  if (!name) {
     showError('Please enter your name');
     return;
   }
@@ -74,11 +122,10 @@ joinBtn.addEventListener('click', () => {
   socket.emit('join', { code, participantName: name });
 });
 
-// ============= TYPING INPUT HANDLER (Monkeytype style) =============
+// ============= TYPING INPUT HANDLER =============
 typingInput.addEventListener('keydown', (e) => {
   if (!isTestInProgress) return;
 
-  // Backspace handling
   if (e.key === 'Backspace') {
     e.preventDefault();
     if (typedChars.length > 0) {
@@ -95,14 +142,9 @@ typingInput.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Ignore modifier keys (Shift, Ctrl, Alt, etc.)
-  if (e.key.length !== 1) {
-    return;
-  }
+  if (e.key.length !== 1) return;
 
-  // Printable character
   e.preventDefault();
-
   const nextIndex = typedChars.length;
   const expectedChar = typingText[nextIndex] || '';
   const typedChar = e.key;
@@ -123,7 +165,6 @@ function updateTypingStats() {
   const inputText = typedChars.join('');
   const correctChars = calculateCorrectChars(inputText, typingText);
   const totalChars = inputText.length;
-  const incorrectChars = totalChars - correctChars;
   const elapsedSeconds = (Date.now() - testStartTime) / 1000;
 
   const wpm = elapsedSeconds > 0
@@ -138,7 +179,6 @@ function updateTypingStats() {
   accuracyDisplay.textContent = accuracy + '%';
   updateTextDisplay(inputText);
 
-  // Emit progress (server validates)
   socket.emit('progress', {
     competitionId,
     correctChars,
@@ -164,18 +204,14 @@ function updateTextDisplay(inputText) {
     let span = `${char}`;
 
     if (i < inputText.length) {
-      if (inputText[i] === char) {
-        span = `<span class="correct">${char}</span>`;
-      } else {
-        span = `<span class="incorrect">${char}</span>`;
-      }
+      span = inputText[i] === char
+        ? `<span class="correct">${char}</span>`
+        : `<span class="incorrect">${char}</span>`;
     } else if (i === inputText.length) {
       span = `<span class="current">${char}</span>`;
     }
-
     html += span;
   }
-
   textDisplay.innerHTML = html;
 }
 
@@ -251,25 +287,36 @@ socket.on('roundEnded', (data) => {
   testScreen.classList.add('hidden');
   resultsScreen.classList.remove('hidden');
 
-  const personalResult = data.leaderboard.find(item => item.name === participantName);
+  const personalResult = data.leaderboard.find(
+    item => item.name === participantName
+  );
 
   if (personalResult) {
     document.getElementById('resultWpm').textContent = personalResult.wpm;
     document.getElementById('resultAccuracy').textContent = personalResult.accuracy + '%';
     document.getElementById('resultErrors').textContent = personalResult.errors;
     document.getElementById('resultBackspaces').textContent = personalResult.backspaces;
+
+    // ===== SAVE RESULT TO HISTORY =====
+    const result = {
+      wpm: personalResult.wpm,
+      accuracy: personalResult.accuracy,
+      characters: typedChars.length,
+      timeTaken: currentRoundDuration,
+      date: new Date().toLocaleString(),
+    };
+
+    saveResultToHistory(result);
+    renderResultHistory();
   }
 });
 
-// ============= FINAL RESULTS - SHOW COMPLETION SCREEN =============
-socket.on('finalResults', (data) => {
-  // Hide all other screens
+// ============= FINAL RESULTS =============
+socket.on('finalResults', () => {
   joinScreen.classList.add('hidden');
   lobbyScreen.classList.add('hidden');
   testScreen.classList.add('hidden');
   resultsScreen.classList.add('hidden');
-  
-  // Show completion screen with save notification
   completionScreen.classList.remove('hidden');
 });
 
@@ -287,3 +334,10 @@ if (joinNewCompetitionBtn) {
     window.location.href = '/';
   });
 }
+
+// Initial render
+document
+  .getElementById("clear-history-btn")
+  ?.addEventListener("click", clearResultHistory);
+
+renderResultHistory();

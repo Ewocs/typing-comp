@@ -70,7 +70,6 @@
 
       <!-- TYPING TEST SCREEN -->
       <section id="testScreen" class="test-screen-improved hidden">
-        <!-- STATS BAR -->
         <div class="stats-bar-improved">
           <div class="stat-box">
             <span class="stat-label">WPM</span>
@@ -81,17 +80,14 @@
             <span class="stat-label">Accuracy</span>
             <span class="stat-value" id="accuracyDisplay">100%</span>
           </div>
+
           <div class="stat-box">
             <span class="stat-label">Time</span>
             <span class="stat-value" id="timerDisplay">0s</span>
           </div>
         </div>
 
-        <!-- TYPING AREA - CENTERED AND IMPROVED -->
         <div class="typing-container-improved">
-          <!-- <div class="text-display-improved" id="textDisplay">
-          <p class="loading-text">Loading text...</p>
-        </div> -->
           <div id="textDisplay"></div>
           <input
             id="typingInput"
@@ -101,7 +97,6 @@
             autocapitalize="off"
             spellcheck="false"
           />
-          
         </div>
       </section>
 
@@ -131,6 +126,29 @@
           <p id="nextRoundText" class="next-round-text">
             ⏳ Waiting for next round...
           </p>
+        </div>
+
+        <!-- ✅ RESULT HISTORY SECTION -->
+        <div class="history-section">
+          <div class="history-header">
+            <h3>Typing Test History</h3>
+            <button id="clear-history-btn" class="btn-secondary">
+              Clear History
+            </button>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>WPM</th>
+                <th>Accuracy (%)</th>
+                <th>Chars</th>
+                <th>Time (s)</th>
+              </tr>
+            </thead>
+            <tbody id="history-body"></tbody>
+          </table>
         </div>
       </section>
 
