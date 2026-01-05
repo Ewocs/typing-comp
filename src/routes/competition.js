@@ -365,7 +365,7 @@ router.get('/my-competitions', auth, async (req, res) => {
 
 /**
  * @swagger
- * /api/competition/{competitionId}:
+ * /api/competition/id/{competitionId}:
  *   get:
  *     summary: Get full competition details by ID
  *     tags: [Competitions]
@@ -399,7 +399,7 @@ router.get('/my-competitions', auth, async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/competition/:competitionId', async (req, res) => {
+router.get('/competition/id/:competitionId', async (req, res) => {
   try {
     const competition = await Competition.findById(req.params.competitionId);
     if (!competition) {
