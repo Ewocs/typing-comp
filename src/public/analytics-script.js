@@ -3,7 +3,7 @@ let charts = {};
 
 // Check authentication
 function checkAuth() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('authToken');
   if (!token) {
     window.location.href = 'login.html';
     return false;
@@ -25,7 +25,7 @@ async function fetchAnalytics(endpoint) {
     });
 
     if (response.status === 401) {
-      localStorage.removeItem('token');
+      localStorage.removeItem('authToken');
       window.location.href = 'login.html';
       return null;
     }
