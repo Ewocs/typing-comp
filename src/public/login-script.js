@@ -71,3 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
     toggle.textContent = isHidden ? "🙈" : "👁️";
   });
 });
+document.getElementById("forgotPasswordLink").addEventListener("click", function (e) {
+  e.preventDefault();
+
+  const msg = document.getElementById("forgotMessage");
+  msg.textContent =
+    "Forgot password feature coming soon. Please log in using another email for now.";
+  msg.classList.add("show");
+});
+
