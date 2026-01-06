@@ -2100,3 +2100,30 @@ body {
     opacity: 1;
   }
 }
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.role-switch {
+  display: flex;
+  gap: 10px;
+}
+
+.role-btn {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #3bbec9;
+  background: transparent;
+  color: #3bbec9;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.role-btn.active {
+  background: #3bbec9;
+  color: #000;
+  cursor: default;
+}

@@ -404,4 +404,18 @@ document
   .getElementById("clear-history-btn")
   ?.addEventListener("click", clearResultHistory);
 
+  // ====== ROLE SWITCH: PARTICIPANT → ORGANIZER ======
+document.addEventListener("DOMContentLoaded", () => {
+  const organizerBtn = document.getElementById("organizerSwitchBtn");
+
+  if (!organizerBtn) {
+    console.warn("Organizer switch button not found");
+    return;
+  }
+
+  organizerBtn.addEventListener("click", () => {
+    window.location.href = "organizer.html";
+  });
+});
+
 renderResultHistory();
