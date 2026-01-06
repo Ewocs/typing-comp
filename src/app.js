@@ -4,6 +4,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const logger = require('./config/logger');
 const requestLogger = require('./middleware/requestLogger');
 
@@ -68,6 +69,7 @@ const swaggerSpec = require('./config/swagger');
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Middleware
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
