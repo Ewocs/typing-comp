@@ -3,7 +3,7 @@ const { updateAndBroadcastLeaderboard } = require('../utils/leaderboard');
 
 async function handleStartRound(socket, io, data, activeCompetitions) {
   const { competitionId, roundIndex } = data;
-  
+
   try {
     const competition = await Competition.findById(competitionId);
     if (!competition) {
@@ -13,6 +13,12 @@ async function handleStartRound(socket, io, data, activeCompetitions) {
 
     const compData = activeCompetitions.get(competitionId);
     if (!compData) return;
+
+    // RACE CONDITION FIX: Prevent multiple starts
+    if (compData.roundInProgress) {
+      console.warn(`[RACE_CONDITION] Blocked duplicate startRound for ${competitionId}`);
+      return;
+    }
 
     const round = competition.rounds[roundIndex];
     if (!round) {
