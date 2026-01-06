@@ -230,15 +230,75 @@ function startTimer(duration) {
 }
 
 // Error display
+// Error display
 function showError(message) {
-  joinError.textContent = message;
-  joinError.classList.add('show');
+  if (typeof document === 'undefined') return;
 
-  clearTimeout(showError._t);
-  showError._t = setTimeout(() => {
-    joinError.classList.remove('show');
-  }, 4000);
+  // Remove existing popup if any
+  const existing = document.getElementById('error-popup-overlay');
+  if (existing) existing.remove();
+
+  // Overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'error-popup-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  // Popup
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    background: #1e1e1e;
+    color: #fff;
+    padding: 28px 32px;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 420px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    animation: popupScale 0.25s ease;
+  `;
+
+  popup.innerHTML = `
+    <div style="font-size: 52px; margin-bottom: 12px;">😢</div>
+    <h2 style="color:#ff4d4f; margin-bottom: 8px;">Oops!</h2>
+    <p style="font-size: 15px; line-height: 1.5;">${message}</p>
+    <button id="errorPopupCloseBtn"
+      style="
+        margin-top: 20px;
+        background:#ff4d4f;
+        border:none;
+        color:white;
+        padding:10px 18px;
+        border-radius:8px;
+        font-size:14px;
+        cursor:pointer;
+      ">
+      Close
+    </button>
+  `;
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+
+  // Close handlers
+  const close = () => overlay.remove();
+
+  document.getElementById('errorPopupCloseBtn').onclick = close;
+  overlay.onclick = (e) => {
+    if (e.target === overlay) close();
+  };
+
+  // Auto-close after 5 seconds
+  setTimeout(close, 5000);
 }
+
 
 // ============= SOCKET EVENTS =============
 
@@ -256,6 +316,13 @@ socket.on('joinError', (data) => {
 
 socket.on('participantJoined', (data) => {
   participantCountDisplay.textContent = data.totalParticipants;
+});
+socket.on('error', (data) => {
+  showError(data?.message || 'Invalid participation code. Please try again.');
+});
+
+socket.on('error', (data) => {
+  showError(data?.message || 'Invalid participation code. Please try again.');
 });
 
 socket.on('roundStarted', (data) => {
