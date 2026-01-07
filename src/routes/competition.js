@@ -3,6 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const Competition = require('../models/Competition');
 const generateCode = require('../utils/codeGenerator');
 const auth = require('../middleware/auth');
+const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 

@@ -1,5 +1,4 @@
 const express = require('express');
-//JWT TOKEN IMPLEMENTED 
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const Organizer = require('../models/Organizer');
@@ -8,7 +7,10 @@ const logger = require('../config/logger');
 
 const router = express.Router();
 
-// Input validation middleware
+/* ===========================
+   VALIDATION MIDDLEWARE
+=========================== */
+
 const validateRegistration = [
   body('name')
     .trim()
@@ -16,15 +18,19 @@ const validateRegistration = [
     .withMessage('Name must be between 2 and 50 characters')
     .matches(/^[a-zA-Z\s]+$/)
     .withMessage('Name can only contain letters and spaces'),
+
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
+
   body('password')
     .isLength({ min: 12, max: 100 })
     .withMessage('Password must be between 12 and 100 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)')
+    .withMessage(
+      'Password must contain lowercase, uppercase, number & special character'
+    ),
 ];
 
 const validateLogin = [
@@ -32,212 +38,159 @@ const validateLogin = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
+
   body('password')
     .notEmpty()
-    .withMessage('Password is required')
+    .withMessage('Password is required'),
 ];
 
-// Handle validation errors
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
       error: 'Validation failed',
-      details: errors.array()
+      details: errors.array(),
     });
   }
   next();
 };
 
-// Generate JWT token
-const generateToken = (id) => {
+/* ===========================
+   JWT TOKEN GENERATOR (RBAC READY)
+=========================== */
+
+const generateToken = (organizer) => {
   return jwt.sign(
-    { id }, 
+    {
+      id: organizer._id,
+      role: 'organizer', // 👈 RBAC FOUNDATION
+      email: organizer.email,
+    },
     process.env.JWT_SECRET || 'fallback_secret_key_change_in_production',
     { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 };
 
-// REGISTER - Create new organizer account
-router.post('/register', validateRegistration, handleValidationErrors, async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+/* ===========================
+   REGISTER ORGANIZER
+=========================== */
 
-    // Check if organizer exists (with error handling)
-    let existingOrganizer;
+router.post(
+  '/register',
+  validateRegistration,
+  handleValidationErrors,
+  async (req, res) => {
     try {
-      existingOrganizer = await Organizer.findOne({ email: email.toLowerCase() });
-    } catch (dbError) {
-      logger.error('Database error during organizer lookup:', dbError);
-      return res.status(500).json({
-        error: 'Database connection error. Please try again.'
+      const { name, email, password } = req.body;
+
+      const existingOrganizer = await Organizer.findOne({
+        email: email.toLowerCase(),
       });
-    }
 
-    if (existingOrganizer) {
-      return res.status(400).json({
-        error: 'Email already registered'
+      if (existingOrganizer) {
+        return res.status(400).json({
+          error: 'Email already registered',
+        });
+      }
+
+      const organizer = new Organizer({
+        name: name.trim(),
+        email: email.toLowerCase(),
+        password,
+        role: 'organizer', // 👈 RBAC ROLE STORED
       });
-    }
 
-    // Create organizer (with error handling)
-    const organizer = new Organizer({
-      name: name.trim(),
-      email: email.toLowerCase(),
-      password
-    });
-
-    try {
       await organizer.save();
-    } catch (saveError) {
-      logger.error('Error saving organizer:', saveError);
 
-      // Handle specific validation errors
-      if (saveError.name === 'ValidationError') {
-        return res.status(400).json({
-          error: 'Invalid data provided. Please check your input.'
-        });
-      }
+      const token = generateToken(organizer);
 
-      // Handle duplicate key errors
-      if (saveError.code === 11000) {
-        return res.status(400).json({
-          error: 'Email already registered'
-        });
-      }
+      logger.info(`✓ New organizer registered: ${email}`);
 
-      return res.status(500).json({
-        error: 'Failed to create account. Please try again.'
+      res.status(201).json({
+        success: true,
+        token,
+        organizer: {
+          id: organizer._id,
+          name: organizer.name,
+          email: organizer.email,
+          role: 'organizer',
+        },
+      });
+    } catch (error) {
+      logger.error('Registration error:', error);
+      res.status(500).json({
+        error: 'Registration failed',
       });
     }
-
-    // Generate token (with error handling)
-    let token;
-    try {
-      token = generateToken(organizer._id);
-    } catch (tokenError) {
-      logger.error('Error generating token:', tokenError);
-      return res.status(500).json({
-        error: 'Account created but login failed. Please try logging in.'
-      });
-    }
-
-    logger.info(`✓ New organizer registered: ${email}`);
-
-    res.status(201).json({
-      success: true,
-      token,
-      organizer: {
-        id: organizer._id,
-        name: organizer.name,
-        email: organizer.email
-      }
-    });
-  } catch (error) {
-    logger.error('Unexpected registration error:', error);
-    res.status(500).json({
-      error: 'Registration failed. Please try again.'
-    });
   }
-});
+);
 
-// LOGIN - Authenticate organizer
-router.post('/login', validateLogin, handleValidationErrors, async (req, res) => {
-  try {
-    const { email, password } = req.body;
+/* ===========================
+   LOGIN ORGANIZER
+=========================== */
 
-    // Find organizer (with error handling)
-    let organizer;
+router.post(
+  '/login',
+  validateLogin,
+  handleValidationErrors,
+  async (req, res) => {
     try {
-      organizer = await Organizer.findOne({
-        email: email.toLowerCase()
+      const { email, password } = req.body;
+
+      const organizer = await Organizer.findOne({
+        email: email.toLowerCase(),
       }).select('+password');
-    } catch (dbError) {
-      logger.error('Database error during login lookup:', dbError);
-      return res.status(500).json({
-        error: 'Database connection error. Please try again.'
-      });
-    }
 
-    if (!organizer) {
-      return res.status(401).json({
-        error: 'Invalid email or password'
-      });
-    }
+      if (!organizer) {
+        return res.status(401).json({
+          error: 'Invalid email or password',
+        });
+      }
 
-    // Check password (with error handling)
-    let isPasswordValid;
-    try {
-      isPasswordValid = await organizer.comparePassword(password);
-    } catch (passwordError) {
-      logger.error('Error comparing password:', passwordError);
-      return res.status(500).json({
-        error: 'Authentication error. Please try again.'
-      });
-    }
+      const isPasswordValid = await organizer.comparePassword(password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          error: 'Invalid email or password',
+        });
+      }
 
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Invalid email or password'
-      });
-    }
-
-    // Update last login (with error handling)
-    try {
       organizer.lastLogin = new Date();
       await organizer.save();
-    } catch (updateError) {
-      logger.warn('Failed to update last login time:', updateError);
-      // Don't fail the login for this, just log it
-    }
 
-    // Generate token (with error handling)
-    let token;
-    try {
-      token = generateToken(organizer._id);
-    } catch (tokenError) {
-      logger.error('Error generating login token:', tokenError);
-      return res.status(500).json({
-        error: 'Login successful but token generation failed. Please try again.'
+      const token = generateToken(organizer);
+
+      logger.info(`✓ Organizer logged in: ${email}`);
+
+      res.json({
+        success: true,
+        token,
+        organizer: {
+          id: organizer._id,
+          name: organizer.name,
+          email: organizer.email,
+          role: 'organizer',
+        },
+      });
+    } catch (error) {
+      logger.error('Login error:', error);
+      res.status(500).json({
+        error: 'Login failed',
       });
     }
-
-    logger.info(`✓ Organizer logged in: ${email}`);
-
-    res.json({
-      success: true,
-      token,
-      organizer: {
-        id: organizer._id,
-        name: organizer.name,
-        email: organizer.email
-      }
-    });
-  } catch (error) {
-    logger.error('Unexpected login error:', error);
-    res.status(500).json({
-      error: 'Login failed. Please try again.'
-    });
   }
-});
+);
 
-// GET CURRENT ORGANIZER - Get authenticated organizer info
+/* ===========================
+   GET CURRENT ORGANIZER (PROTECTED)
+=========================== */
+
 router.get('/me', auth, async (req, res) => {
   try {
-    // Find organizer (with error handling)
-    let organizer;
-    try {
-      organizer = await Organizer.findById(req.organizer.id);
-    } catch (dbError) {
-      logger.error('Database error fetching organizer profile:', dbError);
-      return res.status(500).json({
-        error: 'Database connection error. Please try again.'
-      });
-    }
+    const organizer = await Organizer.findById(req.user.id);
 
     if (!organizer) {
       return res.status(404).json({
-        error: 'Organizer not found'
+        error: 'Organizer not found',
       });
     }
 
@@ -247,14 +200,15 @@ router.get('/me', auth, async (req, res) => {
         id: organizer._id,
         name: organizer.name,
         email: organizer.email,
+        role: 'organizer',
         createdAt: organizer.createdAt,
-        lastLogin: organizer.lastLogin
-      }
+        lastLogin: organizer.lastLogin,
+      },
     });
   } catch (error) {
-    logger.error('Unexpected error fetching organizer profile:', error);
+    logger.error('Profile fetch error:', error);
     res.status(500).json({
-      error: 'Failed to get organizer info'
+      error: 'Failed to fetch organizer info',
     });
   }
 });
