@@ -6,7 +6,7 @@ const OrganizerSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Name is required'],
     trim: true,
-    minlength: [2, 'Name must be at least 2 characters']
+    minlength: [2, 'Name must be at least 2 characters'],
   },
   email: {
     type: String,
@@ -14,7 +14,7 @@ const OrganizerSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
   },
   password: {
     type: String,
@@ -24,18 +24,18 @@ const OrganizerSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   lastLogin: {
     type: Date,
-    default: null
-  }
+    default: null,
+  },
 });
 
 // Hash password before saving
-OrganizerSchema.pre('save', async function(next) {
+OrganizerSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -46,7 +46,7 @@ OrganizerSchema.pre('save', async function(next) {
 });
 
 // Method to compare passwords
-OrganizerSchema.methods.comparePassword = async function(candidatePassword) {
+OrganizerSchema.methods.comparePassword = async function (candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {

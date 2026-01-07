@@ -1,23 +1,46 @@
-## 📡 REST API Reference
+# 📡 REST API Reference
 
-This document provides detailed specifications for all API endpoints in the Typing Competition Platform.
+This document provides comprehensive documentation for all REST API endpoints in the Typing Competition Platform.
 
-## Authentication Endpoints
+## 🔐 Authentication
 
-### POST /api/auth/register - Register New Organizer
+Most endpoints require authentication using JWT tokens. Include the token in the Authorization header:
 
-**Authentication:** None required
+```
+Authorization: Bearer <your-jwt-token>
+```
 
-**Request Body:**
+Rate limiting is applied: **100 requests per 15 minutes per IP**.
+
+---
+
+## 🔑 Authentication Endpoints
+
+### POST /api/auth/register
+
+Create a new organizer account.
+
+**Request:**
 ```json
 {
   "name": "John Doe",
-  "email": "john.doe@example.com",
+  "email": "john@example.com",
   "password": "securepassword123"
 }
 ```
 
-**Response (201 Created):**
+**cURL Example:**
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "securepassword123"
+  }'
+```
+
+**Response (201):**
 ```json
 {
   "success": true,
@@ -25,33 +48,41 @@ This document provides detailed specifications for all API endpoints in the Typi
   "organizer": {
     "id": "507f1f77bcf86cd799439011",
     "name": "John Doe",
-    "email": "john.doe@example.com"
+    "email": "john@example.com"
   }
 }
 ```
 
-**Error Responses:**
-- `400 Bad Request`: Missing required fields or validation errors
-- `500 Internal Server Error`: Server error during registration
+**Errors:**
+- `400` - Missing required fields or password too short
+- `400` - Email already registered
+- `500` - Registration failed
 
-**Validation Rules:**
-- Name: Required, string
-- Email: Required, valid email format, must be unique
-- Password: Required, minimum 6 characters
+---
 
-### POST /api/auth/login - Organizer Login
+### POST /api/auth/login
 
-**Authentication:** None required
+Authenticate an existing organizer.
 
-**Request Body:**
+**Request:**
 ```json
 {
-  "email": "john.doe@example.com",
+  "email": "john@example.com",
   "password": "securepassword123"
 }
 ```
 
-**Response (200 OK):**
+**cURL Example:**
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "securepassword123"
+  }'
+```
+
+**Response (200):**
 ```json
 {
   "success": true,
@@ -59,17 +90,54 @@ This document provides detailed specifications for all API endpoints in the Typi
   "organizer": {
     "id": "507f1f77bcf86cd799439011",
     "name": "John Doe",
-    "email": "john.doe@example.com"
+    "email": "john@example.com"
   }
 }
 ```
 
-**Error Responses:**
-- `400 Bad Request`: Missing email or password
-- `401 Unauthorized`: Invalid email or password
-- `500 Internal Server Error`: Server error during login
+**Errors:**
+- `400` - Missing email or password
+- `401` - Invalid credentials
+- `500` - Login failed
 
-### GET /api/auth/me - Get Current Organizer Info
+---
+
+### GET /api/auth/me
+
+Get current authenticated organizer information. **Requires authentication.**
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:3000/api/auth/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "organizer": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "createdAt": "2026-01-06T10:30:00.000Z",
+    "lastLogin": "2026-01-06T15:45:00.000Z"
+  }
+}
+```
+
+**Errors:**
+- `401` - Unauthorized (invalid token)
+- `404` - Organizer not found
+- `500` - Server error
+
+---
+
+## 🏆 Competition Endpoints
+
+### POST /api/create
+
+Create a new typing competition. **Requires authentication.**
 
 **Authentication:** Bearer token required (JWT)
 
@@ -78,55 +146,46 @@ This document provides detailed specifications for all API endpoints in the Typi
 Authorization: Bearer <jwt_token>
 ```
 
-**Response (200 OK):**
-```json
-{
-  "success": true,
-  "organizer": {
-    "id": "507f1f77bcf86cd799439011",
-    "name": "John Doe",
-    "email": "john.doe@example.com",
-    "createdAt": "2024-01-15T10:30:00.000Z",
-    "lastLogin": "2024-01-20T14:45:00.000Z"
-  }
-}
-```
-
-**Error Responses:**
-- `401 Unauthorized`: Invalid or missing token
-- `404 Not Found`: Organizer not found
-- `500 Internal Server Error`: Server error
-
-## Competition Endpoints
-
-### POST /api/create - Create Competition
-
-**Authentication:** Bearer token required (JWT)
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
 **Request Body:**
 ```json
 {
-  "name": "TechFest 2025 Typing Championship",
-  "description": "Annual college tech fest typing competition",
+  "name": "TechFest 2026",
+  "description": "Annual college typing competition",
   "rounds": [
     {
-      "text": "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once.",
+      "text": "The quick brown fox jumps over the lazy dog. This is a sample text for typing practice.",
       "duration": 60
     },
     {
-      "text": "Programming is the process of creating a set of instructions that tell a computer how to perform a task.",
-      "duration": 45
+      "text": "Programming is the art of telling another human what one wants the computer to do.",
+      "duration": 90
     }
   ]
 }
 ```
 
-**Response (200 OK):**
+**cURL Example:**
+```bash
+curl -X POST http://localhost:3000/api/create \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "TechFest 2026",
+    "description": "Annual college typing competition",
+    "rounds": [
+      {
+        "text": "The quick brown fox jumps over the lazy dog. This is a sample text for typing practice.",
+        "duration": 60
+      },
+      {
+        "text": "Programming is the art of telling another human what one wants the computer to do.",
+        "duration": 90
+      }
+    ]
+  }'
+```
+
+**Response (200):**
 ```json
 {
   "success": true,
@@ -135,182 +194,279 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
-**Error Responses:**
-- `400 Bad Request`: Missing name or rounds
-- `401 Unauthorized`: Invalid or missing token
-- `500 Internal Server Error`: Server error during creation
+**Errors:**
+- `400` - Missing name or rounds
+- `401` - Unauthorized
+- `500` - Failed to create competition
 
-**Validation Rules:**
-- Name: Required, string
-- Description: Optional, string
-- Rounds: Required, array with at least one round
-- Each round must have: text (string) and duration (integer > 0)
+---
 
-### GET /api/competition/:code - Get Competition by Code
+### GET /api/competition/:code
 
-**Authentication:** None required
+Get competition details by competition code (5-character code).
 
-**Path Parameters:**
-- `code`: Competition code (string, e.g., "AB12C")
+**cURL Example:**
+```bash
+curl -X GET http://localhost:3000/api/competition/AB12C
+```
 
-**Response (200 OK):**
+**Response (200):**
 ```json
 {
   "id": "507f1f77bcf86cd799439011",
-  "name": "TechFest 2025 Typing Championship",
+  "name": "TechFest 2026",
   "code": "AB12C",
-  "status": "pending",
+  "status": "ongoing",
   "roundCount": 2,
-  "roundsCompleted": 0,
-  "participants": 0,
-  "currentRound": -1
+  "roundsCompleted": 1,
+  "participants": 15,
+  "currentRound": 1
 }
 ```
 
-**Error Responses:**
-- `404 Not Found`: Competition not found
-- `500 Internal Server Error`: Server error
+**Errors:**
+- `404` - Competition not found
+- `500` - Failed to fetch competition
 
-### GET /api/my-competitions - Get Organizer's Competitions
+---
 
-**Authentication:** Bearer token required (JWT)
+### GET /api/competition/:competitionId
 
-**Headers:**
+Get detailed competition data by MongoDB ObjectId.
+
+**Response (200):**
+```json
+{
+  "competition": {
+    "_id": "507f1f77bcf86cd799439011",
+    "name": "TechFest 2026",
+    "code": "AB12C",
+    "status": "ongoing",
+    "rounds": [
+      {
+        "roundNumber": 1,
+        "text": "Sample text...",
+        "duration": 60,
+        "status": "completed",
+        "results": []
+      }
+    ],
+    "participants": [],
+    "finalRankings": []
+  }
+}
 ```
-Authorization: Bearer <jwt_token>
+
+**Errors:**
+- `404` - Competition not found
+- `500` - Failed to fetch competition
+
+---
+
+### GET /api/my-competitions
+
+Get all competitions created by the authenticated organizer. **Requires authentication.**
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:3000/api/my-competitions \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-**Query Parameters:** None
-
-**Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
   "competitions": [
     {
-      "name": "TechFest 2025",
+      "_id": "507f1f77bcf86cd799439011",
+      "name": "TechFest 2026",
       "code": "AB12C",
-      "status": "ongoing",
-      "currentRound": 1,
-      "totalRounds": 3,
-      "createdAt": "2024-01-15T10:30:00.000Z",
-      "participants": ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+      "status": "completed",
+      "currentRound": 2,
+      "totalRounds": 2,
+      "createdAt": "2026-01-06T10:00:00.000Z",
+      "participants": 15
     }
   ],
   "count": 1
 }
 ```
 
-**Error Responses:**
-- `401 Unauthorized`: Invalid or missing token
-- `500 Internal Server Error`: Server error
+**Errors:**
+- `401` - Unauthorized
+- `500` - Failed to fetch competitions
 
-### GET /api/competition/:competitionId - Get Full Competition Details
+---
 
-**Authentication:** None required
+### GET /api/competition/:competitionId/rankings
 
-**Path Parameters:**
-- `competitionId`: Competition ID (MongoDB ObjectId)
+Get final rankings for a completed competition.
 
-**Response (200 OK):**
-```json
-{
-  "competition": {
-    "_id": "507f1f77bcf86cd799439011",
-    "name": "TechFest 2025 Typing Championship",
-    "description": "Annual college tech fest typing competition",
-    "code": "AB12C",
-    "organizerId": "507f1f77bcf86cd799439013",
-    "organizer": "John Doe",
-    "rounds": [
-      {
-        "roundNumber": 1,
-        "text": "The quick brown fox jumps over the lazy dog...",
-        "duration": 60,
-        "status": "completed",
-        "startedAt": "2024-01-20T10:00:00.000Z",
-        "endedAt": "2024-01-20T11:00:00.000Z",
-        "participantsCompleted": 15,
-        "highestWpm": 85.5,
-        "lowestWpm": 25.3,
-        "averageWpm": 52.7,
-        "averageAccuracy": 94.2,
-        "results": [...],
-        "createdAt": "2024-01-15T10:30:00.000Z"
-      }
-    ],
-    "status": "ongoing",
-    "currentRound": 1,
-    "totalRounds": 3,
-    "roundsCompleted": 1,
-    "participants": ["507f1f77bcf86cd799439011"],
-    "finalRankings": [],
-    "createdAt": "2024-01-15T10:30:00.000Z"
-  }
-}
-```
-
-**Error Responses:**
-- `404 Not Found`: Competition not found
-- `500 Internal Server Error`: Server error
-
-### GET /api/competition/:competitionId/rankings - Get Competition Rankings
-
-**Authentication:** None required
-
-**Path Parameters:**
-- `competitionId`: Competition ID (MongoDB ObjectId)
-
-**Response (200 OK):**
+**Response (200):**
 ```json
 {
   "success": true,
-  "name": "TechFest 2025 Typing Championship",
+  "name": "TechFest 2026",
   "code": "AB12C",
   "rankings": [
     {
       "rank": 1,
       "participantName": "Alice Johnson",
-      "averageWpm": 78.5,
-      "averageAccuracy": 96.2,
-      "totalRoundsCompleted": 3,
-      "highestWpm": 85.3,
-      "lowestWpm": 72.1
-    },
-    {
-      "rank": 2,
-      "participantName": "Bob Smith",
-      "averageWpm": 74.2,
-      "averageAccuracy": 94.8,
-      "totalRoundsCompleted": 3,
-      "highestWpm": 82.1,
-      "lowestWpm": 68.5
+      "averageWpm": 85.5,
+      "averageAccuracy": 97.8,
+      "totalRoundsCompleted": 2,
+      "highestWpm": 92,
+      "lowestWpm": 79
     }
   ],
   "status": "completed"
 }
 ```
 
-**Error Responses:**
-- `404 Not Found`: Competition not found
-- `500 Internal Server Error`: Server error
+**Errors:**
+- `404` - Competition not found
+- `500` - Failed to fetch rankings
 
-## Authentication Notes
+---
 
-- JWT tokens are required for protected endpoints
-- Include the token in the Authorization header as: `Bearer <token>`
-- Tokens expire after 24 hours (configurable via JWT_EXPIRES_IN environment variable)
-- Invalid or expired tokens return 401 Unauthorized
+## 📊 Export Endpoints
 
-## Status Codes
+All export endpoints require authentication and organizer ownership of the competition.
 
-- `200 OK`: Successful request
-- `201 Created`: Resource successfully created
-- `400 Bad Request`: Invalid request data or validation error
-- `401 Unauthorized`: Missing or invalid authentication
-- `404 Not Found`: Resource not found
-- `500 Internal Server Error`: Server-side error
+### GET /api/export/:competitionId/csv
 
-## Rate Limiting
+Export competition rankings as CSV file.
 
-Currently no rate limiting is implemented. Consider adding rate limiting for production use.
+**cURL Example:**
+```bash
+curl -X GET http://localhost:3000/api/export/507f1f77bcf86cd799439011/csv \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -o "competition_rankings.csv"
+```
+
+**Response:** CSV file download with rankings data.
+
+**Filename:** `competition_name_yyyy-mm-dd.csv`
+
+**Errors:**
+- `400` - No rankings available
+- `403` - Permission denied (not organizer)
+- `404` - Competition not found
+- `500` - Export failed
+
+---
+
+### GET /api/export/:competitionId/json
+
+Export complete competition data as JSON file.
+
+**Response:** JSON file download with full competition data including:
+- Competition metadata
+- Final rankings  
+- Round-by-round results
+- Export timestamp and organizer info
+
+**Filename:** `competition_name_yyyy-mm-dd.json`
+
+**Errors:**
+- `400` - No rankings available
+- `403` - Permission denied
+- `404` - Competition not found
+- `500` - Export failed
+
+---
+
+### GET /api/export/:competitionId/rounds/csv
+
+Export detailed round-by-round results as CSV file.
+
+**Response:** CSV file download with detailed typing statistics per round.
+
+**Filename:** `competition_name_rounds_yyyy-mm-dd.csv`
+
+**Errors:**
+- `400` - No round data available
+- `403` - Permission denied
+- `404` - Competition not found  
+- `500` - Export failed
+
+---
+
+## 📝 API Documentation
+
+Interactive API documentation is available at `/api-docs` when the server is running.
+
+**Example:** `http://localhost:3000/api-docs`
+
+---
+
+## 🔧 Postman Collection
+
+For easier testing, you can import these endpoints into Postman:
+
+### Environment Variables
+```
+BASE_URL: http://localhost:3000
+JWT_TOKEN: (set after login/register)
+```
+
+### Sample Postman Requests
+
+**1. Register Organizer**
+- Method: `POST`
+- URL: `{{BASE_URL}}/api/auth/register`
+- Body: Raw JSON
+```json
+{
+  "name": "Test Organizer",
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+**2. Login**
+- Method: `POST`  
+- URL: `{{BASE_URL}}/api/auth/login`
+- Body: Raw JSON
+```json
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+- Tests Script: `pm.environment.set("JWT_TOKEN", pm.response.json().token);`
+
+**3. Create Competition**
+- Method: `POST`
+- URL: `{{BASE_URL}}/api/create`
+- Headers: `Authorization: Bearer {{JWT_TOKEN}}`
+- Body: Raw JSON
+```json
+{
+  "name": "Test Competition",
+  "rounds": [
+    {
+      "text": "Sample typing text for competition",
+      "duration": 60
+    }
+  ]
+}
+```
+
+---
+
+## 🔗 WebSocket Events
+
+For real-time competition features, see [SOCKET_API.md](./SOCKET_API.md).
+
+---
+
+## 🛡️ Security Features
+
+- **Helmet.js**: Security headers and CSP
+- **Rate Limiting**: 100 requests per 15 minutes
+- **CORS**: Configurable cross-origin requests
+- **JWT Authentication**: Secure token-based auth
+- **Input Validation**: Server-side validation
+- **Authorization**: Organizer-specific resource access

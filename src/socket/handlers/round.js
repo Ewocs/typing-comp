@@ -35,28 +35,25 @@ async function handleStartRound(socket, io, data, activeCompetitions) {
         accuracy: 0,
         errors: 0,
         backspaces: 0,
-        testStartTime: Date.now()
+        testStartTime: Date.now(),
       };
     });
 
     // Update DB
-    await Competition.findByIdAndUpdate(
-      competitionId,
-      {
-        currentRound: roundIndex,
-        $set: {
-          [`rounds.${roundIndex}.startedAt`]: startTime,
-          [`rounds.${roundIndex}.status`]: 'in-progress'
-        }
-      }
-    );
+    await Competition.findByIdAndUpdate(competitionId, {
+      currentRound: roundIndex,
+      $set: {
+        [`rounds.${roundIndex}.startedAt`]: startTime,
+        [`rounds.${roundIndex}.status`]: 'in-progress',
+      },
+    });
 
     // Broadcast
     io.to(`competition_${competitionId}`).emit('roundStarted', {
       roundIndex,
       text: round.text,
       duration: round.duration,
-      startTime: Date.now()
+      startTime: Date.now(),
     });
 
     console.log(`✓ Round ${roundIndex + 1} started`);
@@ -64,16 +61,27 @@ async function handleStartRound(socket, io, data, activeCompetitions) {
     // Auto-end after duration
     setTimeout(async () => {
       const competitionDoc = await Competition.findById(competitionId);
-      await handleEndRound(competitionId, roundIndex, competitionDoc, compData, io);
+      await handleEndRound(
+        competitionId,
+        roundIndex,
+        competitionDoc,
+        compData,
+        io
+      );
     }, round.duration * 1000);
-
   } catch (error) {
     console.error('Start round error:', error);
     socket.emit('error', { message: 'Failed to start round' });
   }
 }
 
-async function handleEndRound(competitionId, roundIndex, competition, compData, io) {
+async function handleEndRound(
+  competitionId,
+  roundIndex,
+  competition,
+  compData,
+  io
+) {
   try {
     if (!compData || !compData.roundInProgress) return;
     compData.roundInProgress = false;
@@ -93,7 +101,7 @@ async function handleEndRound(competitionId, roundIndex, competition, compData, 
       backspaces: p.currentRoundData.backspaces || 0,
       typingTime: Math.round(p.currentRoundData.elapsedSeconds) || 0,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }));
 
     // Sort by WPM
@@ -101,47 +109,51 @@ async function handleEndRound(competitionId, roundIndex, competition, compData, 
       .sort((a, b) => b.wpm - a.wpm)
       .map((result, index) => ({
         ...result,
-        rank: index + 1
+        rank: index + 1,
       }));
 
     // Calculate stats
-    const wpmValues = rankedResults.map(r => r.wpm).filter(w => w > 0);
-    const accuracyValues = rankedResults.map(r => r.accuracy);
+    const wpmValues = rankedResults.map((r) => r.wpm).filter((w) => w > 0);
+    const accuracyValues = rankedResults.map((r) => r.accuracy);
 
     const highestWpm = wpmValues.length > 0 ? Math.max(...wpmValues) : 0;
     const lowestWpm = wpmValues.length > 0 ? Math.min(...wpmValues) : 0;
-    const averageWpm = wpmValues.length > 0
-      ? Math.round(wpmValues.reduce((a, b) => a + b, 0) / wpmValues.length)
-      : 0;
-    const averageAccuracy = accuracyValues.length > 0
-      ? Math.round(accuracyValues.reduce((a, b) => a + b, 0) / accuracyValues.length)
-      : 0;
+    const averageWpm =
+      wpmValues.length > 0
+        ? Math.round(wpmValues.reduce((a, b) => a + b, 0) / wpmValues.length)
+        : 0;
+    const averageAccuracy =
+      accuracyValues.length > 0
+        ? Math.round(
+            accuracyValues.reduce((a, b) => a + b, 0) / accuracyValues.length
+          )
+        : 0;
 
     // Save to DB
-    await Competition.findByIdAndUpdate(
-      competitionId,
-      {
-        $set: {
-          [`rounds.${roundIndex}.results`]: rankedResults,
-          [`rounds.${roundIndex}.endedAt`]: endTime,
-          [`rounds.${roundIndex}.status`]: 'completed',
-          [`rounds.${roundIndex}.participantsCompleted`]: rankedResults.length,
-          [`rounds.${roundIndex}.highestWpm`]: highestWpm,
-          [`rounds.${roundIndex}.lowestWpm`]: lowestWpm,
-          [`rounds.${roundIndex}.averageWpm`]: averageWpm,
-          [`rounds.${roundIndex}.averageAccuracy`]: averageAccuracy,
-          [`rounds.${roundIndex}.totalDuration`]: endTime - new Date(competition.rounds[roundIndex].startedAt)
-        },
-        roundsCompleted: compData.currentRound + 1
-      }
-    );
+    await Competition.findByIdAndUpdate(competitionId, {
+      $set: {
+        [`rounds.${roundIndex}.results`]: rankedResults,
+        [`rounds.${roundIndex}.endedAt`]: endTime,
+        [`rounds.${roundIndex}.status`]: 'completed',
+        [`rounds.${roundIndex}.participantsCompleted`]: rankedResults.length,
+        [`rounds.${roundIndex}.highestWpm`]: highestWpm,
+        [`rounds.${roundIndex}.lowestWpm`]: lowestWpm,
+        [`rounds.${roundIndex}.averageWpm`]: averageWpm,
+        [`rounds.${roundIndex}.averageAccuracy`]: averageAccuracy,
+        [`rounds.${roundIndex}.totalDuration`]:
+          endTime - new Date(competition.rounds[roundIndex].startedAt),
+      },
+      roundsCompleted: compData.currentRound + 1,
+    });
 
     console.log(`✓ Round ${roundIndex + 1} ended - Avg ${averageWpm} WPM`);
 
     // Store scores in memory
     compData.participants.forEach((p) => {
       if (!p.scores) p.scores = [];
-      const roundScore = rankedResults.find(r => r.participantName === p.name);
+      const roundScore = rankedResults.find(
+        (r) => r.participantName === p.name
+      );
       if (roundScore) {
         p.scores.push({
           round: roundIndex,
@@ -149,7 +161,7 @@ async function handleEndRound(competitionId, roundIndex, competition, compData, 
           accuracy: roundScore.accuracy,
           rank: roundScore.rank,
           errors: roundScore.errors || 0,
-          backspaces: roundScore.backspaces || 0
+          backspaces: roundScore.backspaces || 0,
         });
         if (!p.roundScores) p.roundScores = [];
         p.roundScores.push({
@@ -158,7 +170,7 @@ async function handleEndRound(competitionId, roundIndex, competition, compData, 
           accuracy: roundScore.accuracy,
           rank: roundScore.rank,
           errors: roundScore.errors || 0,
-          backspaces: roundScore.backspaces || 0
+          backspaces: roundScore.backspaces || 0,
         });
       }
     });
@@ -166,51 +178,65 @@ async function handleEndRound(competitionId, roundIndex, competition, compData, 
     // Send results
     const finalLeaderboard = rankedResults
       .sort((a, b) => a.rank - b.rank)
-      .map(r => ({
+      .map((r) => ({
         name: r.participantName,
         wpm: r.wpm,
         accuracy: r.accuracy,
         errors: r.errors || 0,
         backspaces: r.backspaces || 0,
-        rank: r.rank
+        rank: r.rank,
       }));
 
     io.to(`competition_${competitionId}`).emit('roundEnded', {
       roundIndex,
-      leaderboard: finalLeaderboard
+      leaderboard: finalLeaderboard,
     });
 
     // Check if final round
     if (roundIndex === competition.rounds.length - 1) {
       await handleShowFinalResults(competitionId, compData, competition, io);
     }
-
   } catch (error) {
     console.error('End round error:', error);
   }
 }
 
-async function handleShowFinalResults(competitionId, compData, competition, io) {
+async function handleShowFinalResults(
+  competitionId,
+  compData,
+  competition,
+  io
+) {
   try {
     const participantsArray = Array.from(compData.participants.values());
 
     const finalRankings = participantsArray
-      .map(p => {
+      .map((p) => {
         const scores = p.scores || [];
-        const avgWpm = scores.length > 0
-          ? Math.round(scores.reduce((sum, s) => sum + s.wpm, 0) / scores.length)
-          : 0;
-        const avgAccuracy = scores.length > 0
-          ? Math.round(scores.reduce((sum, s) => sum + s.accuracy, 0) / scores.length)
-          : 0;
-        const highestWpm = scores.length > 0 ? Math.max(...scores.map(s => s.wpm)) : 0;
-        const lowestWpm = scores.length > 0 ? Math.min(...scores.map(s => s.wpm)) : 0;
-        const totalErrors = scores.length > 0
-          ? scores.reduce((sum, s) => sum + (s.errors || 0), 0)
-          : 0;
-        const totalBackspaces = scores.length > 0
-          ? scores.reduce((sum, s) => sum + (s.backspaces || 0), 0)
-          : 0;
+        const avgWpm =
+          scores.length > 0
+            ? Math.round(
+                scores.reduce((sum, s) => sum + s.wpm, 0) / scores.length
+              )
+            : 0;
+        const avgAccuracy =
+          scores.length > 0
+            ? Math.round(
+                scores.reduce((sum, s) => sum + s.accuracy, 0) / scores.length
+              )
+            : 0;
+        const highestWpm =
+          scores.length > 0 ? Math.max(...scores.map((s) => s.wpm)) : 0;
+        const lowestWpm =
+          scores.length > 0 ? Math.min(...scores.map((s) => s.wpm)) : 0;
+        const totalErrors =
+          scores.length > 0
+            ? scores.reduce((sum, s) => sum + (s.errors || 0), 0)
+            : 0;
+        const totalBackspaces =
+          scores.length > 0
+            ? scores.reduce((sum, s) => sum + (s.backspaces || 0), 0)
+            : 0;
 
         return {
           participantName: p.name,
@@ -221,32 +247,29 @@ async function handleShowFinalResults(competitionId, compData, competition, io) 
           lowestWpm,
           totalErrors,
           totalBackspaces,
-          roundScores: scores
+          roundScores: scores,
         };
       })
       .sort((a, b) => b.averageWpm - a.averageWpm)
       .map((ranking, index) => ({
         ...ranking,
-        rank: index + 1
+        rank: index + 1,
       }));
 
     // Save to DB
-    await Competition.findByIdAndUpdate(
-      competitionId,
-      {
-        status: 'completed',
-        completedAt: new Date(),
-        finalRankings: finalRankings.map(r => ({
-          rank: r.rank,
-          participantName: r.participantName,
-          averageWpm: r.averageWpm,
-          averageAccuracy: r.averageAccuracy,
-          totalRoundsCompleted: r.totalRoundsCompleted,
-          highestWpm: r.highestWpm,
-          lowestWpm: r.lowestWpm
-        }))
-      }
-    );
+    await Competition.findByIdAndUpdate(competitionId, {
+      status: 'completed',
+      completedAt: new Date(),
+      finalRankings: finalRankings.map((r) => ({
+        rank: r.rank,
+        participantName: r.participantName,
+        averageWpm: r.averageWpm,
+        averageAccuracy: r.averageAccuracy,
+        totalRoundsCompleted: r.totalRoundsCompleted,
+        highestWpm: r.highestWpm,
+        lowestWpm: r.lowestWpm,
+      })),
+    });
 
     // PERF FIX: Use bulkWrite instead of loop
     if (finalRankings.length > 0) {
@@ -275,20 +298,19 @@ async function handleShowFinalResults(competitionId, compData, competition, io) 
 
     // Emit final results
     io.to(`competition_${competitionId}`).emit('finalResults', {
-      rankings: finalRankings.map(r => ({
+      rankings: finalRankings.map((r) => ({
         name: r.participantName,
         avgWpm: r.averageWpm,
         avgAccuracy: r.averageAccuracy,
         rank: r.rank,
         rounds: r.roundScores,
         totalErrors: r.totalErrors,
-        totalBackspaces: r.totalBackspaces
-      }))
+        totalBackspaces: r.totalBackspaces,
+      })),
     });
-
   } catch (error) {
     console.error('Final results error:', error);
   }
 }
 
-module.exports = { handleStartRound, handleEndRound, handleShowFinalResults }
+module.exports = { handleStartRound, handleEndRound, handleShowFinalResults };

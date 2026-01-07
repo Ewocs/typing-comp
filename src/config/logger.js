@@ -36,7 +36,7 @@ const format = winston.format.combine(
 const transports = [
   // Console transport
   new winston.transports.Console(),
-  
+
   // Error log file (errors only)
   new winston.transports.File({
     filename: path.join('logs', 'error.log'),
@@ -46,7 +46,7 @@ const transports = [
       winston.format.json()
     ),
   }),
-  
+
   // Combined log file (all levels)
   new winston.transports.File({
     filename: path.join('logs', 'all.log'),
@@ -55,7 +55,7 @@ const transports = [
       winston.format.json()
     ),
   }),
-  
+
   // HTTP log file (API requests)
   new winston.transports.File({
     filename: path.join('logs', 'http.log'),

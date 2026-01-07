@@ -7,4 +7,4 @@ function generateCode() {
   return code;
 }
 
-module.exports = generateCode
+module.exports = generateCode;

@@ -4,6 +4,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 const logger = require('./config/logger');
 const requestLogger = require('./middleware/requestLogger');
 
@@ -70,9 +71,19 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(mongoSanitize());
 app.use(requestLogger);
 
 logger.info('✓ Express app initialized');
+
+// Health Check
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

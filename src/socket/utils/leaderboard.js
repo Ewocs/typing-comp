@@ -12,23 +12,26 @@ function typingTextLengthFor(compData) {
 
 function updateAndBroadcastLeaderboard(competitionId, compData, io) {
   const totalTextLength = typingTextLengthFor(compData) || 0;
-  
+
   const leaderboard = Array.from(compData.participants.values())
-    .map(p => ({
+    .map((p) => ({
       name: p.name,
       wpm: p.currentRoundData?.wpm || 0,
       accuracy: p.currentRoundData?.accuracy || 0,
       errors: p.currentRoundData?.errors || 0,
       backspaces: p.currentRoundData?.backspaces || 0,
-      progress: totalTextLength > 0 
-        ? Math.round(((p.currentRoundData?.totalChars || 0) / totalTextLength) * 100) 
-        : 0
+      progress:
+        totalTextLength > 0
+          ? Math.round(
+              ((p.currentRoundData?.totalChars || 0) / totalTextLength) * 100
+            )
+          : 0,
     }))
     .sort((a, b) => b.wpm - a.wpm);
 
   io.to(`competition_${competitionId}`).emit('leaderboardUpdate', {
     roundIndex: compData.currentRound,
-    leaderboard
+    leaderboard,
   });
 }
 

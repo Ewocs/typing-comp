@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 const Competition = require('../models/Competition');
+const Participant = require('../models/Participant');
 const generateCode = require('../utils/codeGenerator');
 const auth = require('../middleware/auth');
 
@@ -61,9 +62,12 @@ const handleValidationErrors = (req, res, next) => {
 router.post('/create', auth, validateCompetitionCreation, handleValidationErrors, async (req, res) => {
   try {
     const { name, description, rounds } = req.body;
-    
+    if (!name || !rounds || rounds.length === 0) {
+      return res.status(400).json({ error: 'Name and rounds required' });
+    }
+
     const code = generateCode();
-    
+
     const competition = new Competition({
       name: name.trim(),
       description: description ? description.trim() : '',
@@ -84,14 +88,14 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
         averageWpm: 0,
         averageAccuracy: 0,
         results: [],
-        createdAt: new Date()
+        createdAt: new Date(),
       })),
       status: 'pending',
       currentRound: -1,
       totalRounds: rounds.length,
       roundsCompleted: 0,
       finalRankings: [],
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     await competition.save();
@@ -107,7 +111,7 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
 router.get('/competition/:code', validateCompetitionCode, handleValidationErrors, async (req, res) => {
   try {
     const competition = await Competition.findOne({ code: req.params.code });
-    
+
     if (!competition) {
       return res.status(404).json({ error: 'Competition not found' });
     }
@@ -119,8 +123,10 @@ router.get('/competition/:code', validateCompetitionCode, handleValidationErrors
       status: competition.status,
       roundCount: competition.rounds.length,
       roundsCompleted: competition.roundsCompleted,
-      participants: competition.participants.length,
-      currentRound: competition.currentRound
+      participants: await Participant.countDocuments({
+        competitionId: competition._id,
+      }),
+      currentRound: competition.currentRound,
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch competition' });
@@ -130,17 +136,19 @@ router.get('/competition/:code', validateCompetitionCode, handleValidationErrors
 // GET MY COMPETITIONS (Protected)
 router.get('/my-competitions', auth, async (req, res) => {
   try {
-    const competitions = await Competition.find({ 
-      organizerId: req.organizer.id 
+    const competitions = await Competition.find({
+      organizerId: req.organizer.id,
     })
-    .select('name code status currentRound totalRounds createdAt participants')
-    .sort({ createdAt: -1 })
-    .limit(50);
-    
-    res.json({ 
-      success: true, 
+      .select(
+        'name code status currentRound totalRounds createdAt'
+      )
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json({
+      success: true,
       competitions,
-      count: competitions.length
+      count: competitions.length,
     });
   } catch (error) {
     console.error('Fetch competitions error:', error);
@@ -167,7 +175,7 @@ router.get('/competition/:competitionId/rankings', validateCompetitionId, handle
   try {
     const competition = await Competition.findById(req.params.competitionId)
       .select('name code finalRankings status');
-    
+
     if (!competition) {
       return res.status(404).json({ error: 'Competition not found' });
     }

@@ -11,7 +11,10 @@ function initializeSocketEvents(io) {
 
     // JOIN COMPETITION
     socket.on('join', (data) => {
-      logger.debug('Join event received', { socketId: socket.id, code: data.code });
+      logger.debug('Join event received', {
+        socketId: socket.id,
+        code: data.code,
+      });
       handleJoin(socket, io, data, activeCompetitions);
     });
 
@@ -23,13 +26,19 @@ function initializeSocketEvents(io) {
 
     // START ROUND
     socket.on('startRound', (data) => {
-      logger.info('Start round event received', { competitionId: data.competitionId, roundIndex: data.roundIndex });
+      logger.info('Start round event received', {
+        competitionId: data.competitionId,
+        roundIndex: data.roundIndex,
+      });
       handleStartRound(socket, io, data, activeCompetitions);
     });
 
     // TYPING PROGRESS
     socket.on('progress', (data) => {
-      logger.debug('Progress event', { socketId: socket.id, wpm: data.wpm || 'calculating' });
+      logger.debug('Progress event', {
+        socketId: socket.id,
+        wpm: data.wpm || 'calculating',
+      });
       handleProgress(socket, io, data, activeCompetitions);
     });
 
@@ -42,12 +51,15 @@ function initializeSocketEvents(io) {
           const participant = compData.participants.get(socket.id);
           if (participant) {
             compData.participants.delete(socket.id);
-            logger.debug(`Participant removed: ${participant.name}`, { 
-              remainingParticipants: compData.participants.size 
+            logger.debug(`Participant removed: ${participant.name}`, {
+              remainingParticipants: compData.participants.size,
             });
-            io.to(`competition_${socket.competitionId}`).emit('participantLeft', {
-              totalParticipants: compData.participants.size
-            });
+            io.to(`competition_${socket.competitionId}`).emit(
+              'participantLeft',
+              {
+                totalParticipants: compData.participants.size,
+              }
+            );
           }
         }
       }
