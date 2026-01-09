@@ -1969,6 +1969,21 @@ body {
     flex-direction: column;
     gap: var(--space-6);
   }
+
+  /* Tablet-specific button improvements */
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+    padding: var(--space-14) var(--space-24);
+  }
+
+  /* Tablet-specific input improvements */
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    min-height: 44px;
+    padding: var(--space-14) var(--space-18);
+  }
 }
 
 @media (max-width: 480px) {
@@ -2057,6 +2072,52 @@ body {
   .leaderboard-stats {
     flex-direction: column;
     gap: var(--space-6);
+  }
+
+  /* Mobile-specific button improvements */
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+    padding: var(--space-16) var(--space-24);
+    font-size: var(--font-size-lg);
+  }
+
+  /* Mobile-specific input improvements */
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    min-height: 44px;
+    padding: var(--space-16) var(--space-20);
+    font-size: var(--font-size-lg);
+  }
+
+  /* Reduce test screen padding on mobile */
+  .test-screen-improved {
+    padding: var(--space-16) var(--space-10);
+    gap: var(--space-16);
+    min-height: auto;
+  }
+
+  .typing-container-improved {
+    padding: var(--space-20) var(--space-16);
+    gap: var(--space-20);
+  }
+
+  /* Ensure no horizontal overflow */
+  .stats-bar-improved {
+    max-width: 100%;
+  }
+
+  .typing-container-improved {
+    max-width: 100%;
+  }
+
+  /* Mobile scroll to top button */
+  #scrollToTopBtn {
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
   }
 }
 
