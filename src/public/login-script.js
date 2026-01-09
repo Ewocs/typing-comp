@@ -56,8 +56,26 @@ const loginForm = document.getElementById('loginForm');
         loginBtn.textContent = 'Login';
       }
 
-      
+
     });
+
+// ============= KEYBOARD SHORTCUTS =============
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'Enter':
+      // Submit login form
+      e.preventDefault();
+      loginForm.dispatchEvent(new Event('submit'));
+      break;
+    case 'Escape':
+      // Clear form or go back
+      e.preventDefault();
+      // Add logic to clear form fields if needed
+      document.getElementById('email').value = '';
+      document.getElementById('password').value = '';
+      break;
+  }
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   const passwordInput = document.getElementById("password");

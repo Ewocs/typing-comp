@@ -754,6 +754,42 @@ select.form-control {
   outline-offset: 2px;
 }
 
+/* Enhanced keyboard focus indicators */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb, 33, 128, 141), 0.25);
+}
+
+/* Focus for interactive elements */
+.nav-link:focus-visible,
+.round-btn:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb, 33, 128, 141), 0.25);
+}
+
+/* Skip link for screen readers */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--color-primary);
+  color: var(--color-btn-primary-text);
+  padding: 8px;
+  text-decoration: none;
+  z-index: 1000;
+}
+
+.skip-link:focus-visible {
+  top: 6px;
+}
+
 /* Dark mode specifics */
 [data-color-scheme='dark'] .btn--outline {
   border: 1px solid var(--color-border-secondary);
@@ -2311,4 +2347,123 @@ body {
 
 [data-color-scheme='dark'] #scrollToTopBtn:hover {
     background-color: var(--color-primary-hover);
+}
+
+/* ============================================
+   PROGRESS BAR STYLES
+   ============================================ */
+
+.progress-container {
+  width: 100%;
+  max-width: 600px;
+  margin: var(--space-16) 0;
+  animation: slideDown 0.5s ease-out;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+  box-shadow: var(--shadow-inset-sm);
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-success));
+  width: 0%;
+  transition: width 0.3s ease-out;
+  border-radius: inherit;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-text {
+  text-align: center;
+  margin-top: var(--space-12);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.progress-text span {
+  color: var(--color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+/* ARIA support for accessibility */
+.progress-bar[role="progressbar"] {
+  position: relative;
+}
+
+.progress-bar[role="progressbar"]::before {
+  content: attr(aria-valuenow) '%';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .progress-container {
+    max-width: 100%;
+    margin: var(--space-12) 0;
+  }
+
+  .progress-bar {
+    height: 10px;
+  }
+
+  .progress-text {
+    font-size: var(--font-size-base);
+    margin-top: var(--space-10);
+  }
+
+  .progress-text span {
+    font-size: var(--font-size-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-text {
+    font-size: var(--font-size-sm);
+  }
+
+  .progress-text span {
+    font-size: var(--font-size-base);
+  }
 }
