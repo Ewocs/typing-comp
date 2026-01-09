@@ -2,6 +2,7 @@ const logger = require('../config/logger');
 const { handleJoin, handleOrganizerJoin } = require('./handlers/join');
 const { handleProgress } = require('./handlers/typing');
 const { handleStartRound } = require('./handlers/round');
+const Participant = require('../models/Participant');
 
 const activeCompetitions = new Map();
 
@@ -47,13 +48,30 @@ function initializeSocketEvents(io) {
       logger.info(`🔌 Socket Disconnected: ${socket.id}`);
       if (socket.competitionId) {
         const compData = activeCompetitions.get(socket.competitionId);
-        if (compData && !socket.isOrganizer) {
+        if (compData && !socket.isOrganizer && compData.competitionDoc.status !== 'completed') {
           const participant = compData.participants.get(socket.id);
           if (participant) {
             compData.participants.delete(socket.id);
             logger.debug(`Participant removed: ${participant.name}`, {
               remainingParticipants: compData.participants.size,
             });
+
+            // Clean up Participant document from database
+            try {
+              await Participant.findOneAndDelete({
+                competitionId: socket.competitionId,
+                socketId: socket.id,
+                name: participant.name
+              });
+              logger.debug(`Participant document removed from database: ${participant.name}`);
+            } catch (error) {
+              logger.error(`Failed to remove participant from database: ${error.message}`, {
+                competitionId: socket.competitionId,
+                socketId: socket.id,
+                participantName: participant.name
+              });
+            }
+
             io.to(`competition_${socket.competitionId}`).emit(
               'participantLeft',
               {

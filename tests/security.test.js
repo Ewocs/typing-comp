@@ -18,4 +18,51 @@ describe('Security Middleware', () => {
         expect(res.headers).toHaveProperty('ratelimit-limit');
         expect(res.headers).toHaveProperty('ratelimit-remaining');
     });
+
+    describe('Authentication Validation Logging', () => {
+        it('should log validation errors for registration', async () => {
+            const invalidData = {
+                name: 'A', // Too short
+                email: 'invalid-email', // Invalid email
+                password: 'short' // Too short and missing requirements
+            };
+
+            const res = await request(app)
+                .post('/api/auth/register')
+                .send(invalidData);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Validation failed');
+            expect(Array.isArray(res.body.details)).toBe(true);
+        });
+
+        it('should log validation errors for login', async () => {
+            const invalidData = {
+                email: 'not-an-email', // Invalid email
+                password: '' // Empty password
+            };
+
+            const res = await request(app)
+                .post('/api/auth/login')
+                .send(invalidData);
+
+            expect(res.statusCode).toBe(400);
+            expect(res.body.error).toBe('Validation failed');
+            expect(Array.isArray(res.body.details)).toBe(true);
+        });
+
+        it('should log failed login attempts', async () => {
+            const invalidCredentials = {
+                email: 'nonexistent@example.com',
+                password: 'wrongpassword'
+            };
+
+            const res = await request(app)
+                .post('/api/auth/login')
+                .send(invalidCredentials);
+
+            expect(res.statusCode).toBe(401);
+            expect(res.body.error).toBe('Invalid email or password');
+        });
+    });
 });

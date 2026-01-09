@@ -47,6 +47,23 @@ const validateLogin = [
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    // Log validation errors for monitoring and security
+    const errorDetails = errors.array().map(err => ({
+      field: err.path,
+      message: err.msg,
+      value: err.path === 'password' ? '[REDACTED]' : err.value // Don't log actual password values
+    }));
+
+    logger.warn('Authentication validation failed', {
+      endpoint: req.path,
+      method: req.method,
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent'),
+      email: req.body.email ? req.body.email.toLowerCase() : 'not provided',
+      errors: errorDetails,
+      errorCount: errors.array().length
+    });
+
     return res.status(400).json({
       error: 'Validation failed',
       details: errors.array(),
@@ -88,6 +105,15 @@ router.post(
       });
 
       if (existingOrganizer) {
+        logger.warn('Registration attempt with existing email', {
+          endpoint: req.path,
+          method: req.method,
+          ip: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+          email: email.toLowerCase(),
+          existingOrganizerId: existingOrganizer._id,
+          attemptType: 'duplicate_email'
+        });
         return res.status(400).json({
           error: 'Email already registered',
         });
@@ -142,6 +168,14 @@ router.post(
       }).select('+password');
 
       if (!organizer) {
+        logger.warn('Login attempt with non-existent email', {
+          endpoint: req.path,
+          method: req.method,
+          ip: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+          email: email.toLowerCase(),
+          attemptType: 'non_existent_email'
+        });
         return res.status(401).json({
           error: 'Invalid email or password',
         });
@@ -149,6 +183,15 @@ router.post(
 
       const isPasswordValid = await organizer.comparePassword(password);
       if (!isPasswordValid) {
+        logger.warn('Login attempt with invalid password', {
+          endpoint: req.path,
+          method: req.method,
+          ip: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent'),
+          email: email.toLowerCase(),
+          organizerId: organizer._id,
+          attemptType: 'invalid_password'
+        });
         return res.status(401).json({
           error: 'Invalid email or password',
         });

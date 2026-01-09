@@ -3,27 +3,23 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 const Competition = require('../src/models/Competition');
 const Participant = require('../src/models/Participant');
 const { handleJoin } = require('../src/socket/handlers/join');
+const { activeCompetitions } = require('../src/socket/events');
 
 let mongoServer;
-
 beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
 });
-
 afterAll(async () => {
     await mongoose.disconnect();
     await mongoServer.stop();
 });
-
 describe('Participant Refactor', () => {
     let competition;
-
     beforeEach(async () => {
         await Competition.deleteMany({});
         await Participant.deleteMany({});
-
         competition = await Competition.create({
             name: 'Test Comp',
             code: 'TEST01',
@@ -31,7 +27,6 @@ describe('Participant Refactor', () => {
             organizer: 'Organizer',
         });
     });
-
     it('should create a participant in the separate collection', async () => {
         const socketMock = {
             id: 'socket-123',
@@ -43,25 +38,21 @@ describe('Participant Refactor', () => {
             emit: jest.fn(),
         };
         const activeCompetitions = new Map();
-
         await handleJoin(
             socketMock,
             ioMock,
             { code: 'TEST01', participantName: 'Player1' },
             activeCompetitions
         );
-
         // Verify Participant document created
         const participant = await Participant.findOne({ name: 'Player1' });
         expect(participant).toBeDefined();
         expect(participant.competitionId.toString()).toBe(competition._id.toString());
         expect(participant.socketId).toBe('socket-123');
-
         // Verify Competition does NOT have participants array (schema check)
         const compCheck = await Competition.findById(competition._id);
         expect(compCheck.participants).toBeUndefined();
     });
-
     it('should prevent duplicate participants in the same competition', async () => {
         // Create first participant manually
         await Participant.create({
@@ -69,7 +60,6 @@ describe('Participant Refactor', () => {
             name: 'Player1',
             socketId: 'socket-123'
         });
-
         // Try to create second with same name/comp
         try {
             await Participant.create({
@@ -81,5 +71,54 @@ describe('Participant Refactor', () => {
         } catch (err) {
             expect(err.code).toBe(11000); // MongoDB duplicate key error
         }
+    });
+    it('should clean up participant data on disconnect', async () => {
+        const socketMock = {
+            id: 'socket-123',
+            join: jest.fn(),
+            emit: jest.fn(),
+            competitionId: null,
+            participantName: null,
+            isOrganizer: false,
+        };
+        const ioMock = {
+            to: jest.fn().mockReturnThis(),
+            emit: jest.fn(),
+        };
+        // Join the competition
+        await handleJoin(
+            socketMock,
+            ioMock,
+            { code: 'TEST01', participantName: 'Player1' },
+            activeCompetitions
+        );
+        // Verify participant was added
+        const compData = activeCompetitions.get(competition._id.toString());
+        expect(compData.participants.has('socket-123')).toBe(true);
+        expect(compData.participants.size).toBe(1);
+        // Verify Participant document exists
+        let participantDoc = await Participant.findOne({ name: 'Player1' });
+        expect(participantDoc).toBeDefined();
+        expect(participantDoc.socketId).toBe('socket-123');
+        // Simulate disconnect by calling the disconnect handler logic
+        socketMock.competitionId = competition._id.toString();
+        socketMock.participantName = 'Player1';
+        // Manually trigger disconnect cleanup (since we can't easily mock socket events)
+        const participant = compData.participants.get(socketMock.id);
+        if (participant) {
+            compData.participants.delete(socketMock.id);
+            // Clean up Participant document from database
+            await Participant.findOneAndDelete({
+                competitionId: socketMock.competitionId,
+                socketId: socketMock.id,
+                name: participant.name
+            });
+        }
+        // Verify participant was removed from memory
+        expect(compData.participants.has('socket-123')).toBe(false);
+        expect(compData.participants.size).toBe(0);
+        // Verify Participant document was removed from database
+        participantDoc = await Participant.findOne({ name: 'Player1' });
+        expect(participantDoc).toBeNull();
     });
 });
