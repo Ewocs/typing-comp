@@ -36,6 +36,28 @@
     });
   }
 
+  // ============= KEYBOARD SHORTCUTS =============
+  document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'Tab':
+        // Navigate through navbar links
+        e.preventDefault();
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        const currentIndex = Array.from(navLinks).findIndex(link => link.classList.contains('active'));
+        const nextIndex = (currentIndex + 1) % navLinks.length;
+        navLinks[nextIndex].focus();
+        break;
+      case 'Escape':
+        // Close mobile menu
+        if (navbarNav.classList.contains('active')) {
+          e.preventDefault();
+          navbarToggle.classList.remove('active');
+          navbarNav.classList.remove('active');
+        }
+        break;
+    }
+  });
+
   // Scroll Effect - Add shadow and compact navbar on scroll
   let lastScroll = 0;
   window.addEventListener('scroll', function() {

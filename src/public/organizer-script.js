@@ -139,8 +139,8 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
     const response = await fetch('/api/create', {
       method: 'POST',
       headers: getAuthHeaders(),
-    body: JSON.stringify({ 
-  name: compName, 
+    body: JSON.stringify({
+  name: compName,
   description: compDescription,
   rounds,
   maxPlayers // 👈 ADD THIS
@@ -166,11 +166,11 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
       document.getElementById('setupForm').classList.add('hidden');
       codeDisplay.classList.remove('hidden');
       codeDisplay.classList.add('show');
-      
+
       // Show control panel elements
       roundSelector.classList.remove('hidden');
       compInfo.classList.remove('hidden');
-      
+
       compNameDisplay.textContent = compName;
       statusDisplay.textContent = 'Ready';
 
@@ -187,6 +187,52 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
   } catch (error) {
     console.error('Error:', error);
     alert('Connection error');
+  }
+});
+
+// ============= KEYBOARD SHORTCUTS =============
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'Enter':
+      // Submit form or create competition
+      if (document.getElementById('setupForm') && !document.getElementById('setupForm').classList.contains('hidden')) {
+        e.preventDefault();
+        createCompBtn.click();
+      }
+      break;
+    case 'Tab':
+      // Switch to participant role
+      e.preventDefault();
+      window.location.href = "/participant.html";
+      break;
+    case 'Escape':
+      // Close modals or go back
+      e.preventDefault();
+      // Add logic to close any open modals or go back
+      break;
+    case 'ArrowUp':
+    case 'ArrowDown':
+      // Navigate rounds or options
+      e.preventDefault();
+      const roundButtons = document.querySelectorAll('.round-btn:not(.completed)');
+      if (roundButtons.length > 0) {
+        const currentIndex = Array.from(roundButtons).findIndex(btn => btn.classList.contains('active'));
+        let nextIndex;
+        if (e.key === 'ArrowDown') {
+          nextIndex = (currentIndex + 1) % roundButtons.length;
+        } else {
+          nextIndex = currentIndex === 0 ? roundButtons.length - 1 : currentIndex - 1;
+        }
+        roundButtons[nextIndex].click();
+      }
+      break;
+    case ' ':
+      // Start round
+      if (startRoundBtn && !startRoundBtn.disabled) {
+        e.preventDefault();
+        startRoundBtn.click();
+      }
+      break;
   }
 });
 

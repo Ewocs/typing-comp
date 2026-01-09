@@ -118,6 +118,45 @@ joinBtn.addEventListener('click', () => {
   socket.emit('join', { code, participantName: name });
 });
 
+// ============= KEYBOARD SHORTCUTS =============
+document.addEventListener('keydown', (e) => {
+  // Prevent shortcuts during typing test
+  if (isTestInProgress) return;
+
+  switch (e.key) {
+    case 'Enter':
+      // Join competition or submit forms
+      if (joinScreen.classList.contains('hidden') === false) {
+        e.preventDefault();
+        joinBtn.click();
+      }
+      break;
+    case 'Tab':
+      // Switch to organizer role
+      e.preventDefault();
+      window.location.href = "organizer.html";
+      break;
+    case 'Escape':
+      // Close modals or go back
+      if (resultsScreen.classList.contains('hidden') === false) {
+        e.preventDefault();
+        joinNewCompetitionBtn.click();
+      }
+      break;
+    case 'ArrowUp':
+    case 'ArrowDown':
+      // Navigate lists/options (if any)
+      e.preventDefault();
+      // Add navigation logic here if needed
+      break;
+    case ' ':
+      // Trigger primary actions (e.g., start if applicable)
+      e.preventDefault();
+      // Add primary action logic here if needed
+      break;
+  }
+});
+
 // ============= TYPING INPUT HANDLER =============
 typingInput.addEventListener('keydown', (e) => {
   if (!isTestInProgress) return;
@@ -171,9 +210,24 @@ function updateTypingStats() {
     ? Math.round((correctChars / totalChars) * 100)
     : 100;
 
+  // Calculate progress percentage
+  const progress = typingText.length > 0
+    ? Math.round((totalChars / typingText.length) * 100)
+    : 0;
+
   wpmDisplay.textContent = wpm;
   accuracyDisplay.textContent = accuracy + '%';
   updateTextDisplay(inputText);
+
+  // Update progress bar
+  const progressFill = document.getElementById('progressFill');
+  const progressPercentage = document.getElementById('progressPercentage');
+  if (progressFill) {
+    progressFill.style.width = progress + '%';
+  }
+  if (progressPercentage) {
+    progressPercentage.textContent = progress + '%';
+  }
 
   socket.emit('progress', {
     competitionId,

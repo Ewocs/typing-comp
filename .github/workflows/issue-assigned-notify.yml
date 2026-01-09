@@ -17,10 +17,13 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const assignee = context.payload.issue.assignee?.login;
+            // User who was assigned to the issue
+            const assignee = context.payload.assignee?.login;
+            // User who did the assigning (not used for notification)
+            const assigner = context.payload.sender?.login;
+
             const issueNumber = context.payload.issue.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
+            const { owner, repo } = context.repo;
 
             if (!assignee) {
               core.info('No assignee found, skipping.');
