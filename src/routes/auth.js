@@ -4,6 +4,8 @@ const { body, validationResult } = require('express-validator');
 const Organizer = require('../models/Organizer');
 const auth = require('../middleware/auth');
 const logger = require('../config/logger');
+const AppError = require('../utils/appError');
+const catchAsync = require('../utils/catchAsync');
 
 const router = express.Router();
 
@@ -64,10 +66,7 @@ const handleValidationErrors = (req, res, next) => {
       errorCount: errors.array().length
     });
 
-    return res.status(400).json({
-      error: 'Validation failed',
-      details: errors.array(),
-    });
+    return next(new AppError('Validation failed', 400, errors.array()));
   }
   next();
 };
@@ -96,63 +95,50 @@ router.post(
   '/register',
   validateRegistration,
   handleValidationErrors,
-  async (req, res) => {
-    try {
-      const { name, email, password } = req.body;
-      if(name.trim().length < 2) {
-        return res.status(400).json({
-          error: 'Name must be at least 2 characters'
-        });
-      }
-      const existingOrganizer = await Organizer.findOne({
+  catchAsync(async (req, res, next) => {
+    const { name, email, password } = req.body;
+
+    const existingOrganizer = await Organizer.findOne({
+      email: email.toLowerCase(),
+    });
+
+    if (existingOrganizer) {
+      logger.warn('Registration attempt with existing email', {
+        endpoint: req.path,
+        method: req.method,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
         email: email.toLowerCase(),
+        existingOrganizerId: existingOrganizer._id,
+        attemptType: 'duplicate_email'
       });
-
-      if (existingOrganizer) {
-        logger.warn('Registration attempt with existing email', {
-          endpoint: req.path,
-          method: req.method,
-          ip: req.ip || req.connection.remoteAddress,
-          userAgent: req.get('User-Agent'),
-          email: email.toLowerCase(),
-          existingOrganizerId: existingOrganizer._id,
-          attemptType: 'duplicate_email'
-        });
-        return res.status(400).json({
-          error: 'Email already registered',
-        });
-      }
-
-      const organizer = new Organizer({
-        name: name.trim(),
-        email: email.toLowerCase(),
-        password,
-        role: 'organizer', // 👈 RBAC ROLE STORED
-      });
-
-      await organizer.save();
-
-      const token = generateToken(organizer);
-
-      logger.info(`✓ New organizer registered: ${email}`);
-
-      res.status(201).json({
-        success: true,
-        token,
-        organizer: {
-          id: organizer._id,
-          name: organizer.name,
-          email: organizer.email,
-          role: 'organizer',
-        },
-      });
-    } catch (error) {
-      logger.error('Registration error:', error);
-      res.status(500).json({
-        error: 'Registration failed',
-      });
+      return next(new AppError('Email already registered', 400));
     }
-  }
+
+    const organizer = new Organizer({
+      name: name.trim(),
+      email: email.toLowerCase(),
+      password,
+      role: 'organizer',
+    });
+
+    await organizer.save();
+
+    const token = generateToken(organizer);
+
+    logger.info(`✓ New organizer registered: ${email}`);
+
+    res.status(201).json({
+      success: true,
+      token,
+      organizer: {
+        id: organizer._id,
+        name: organizer.name,
+        email: organizer.email,
+        role: 'organizer',
+      },
+    });
+  })
 );
 
 /* ===========================
@@ -163,101 +149,81 @@ router.post(
   '/login',
   validateLogin,
   handleValidationErrors,
-  async (req, res) => {
-    try {
-      const { email, password } = req.body;
+  catchAsync(async (req, res, next) => {
+    const { email, password } = req.body;
 
-      const organizer = await Organizer.findOne({
+    const organizer = await Organizer.findOne({
+      email: email.toLowerCase(),
+    }).select('+password');
+
+    if (!organizer) {
+      logger.warn('Login attempt with non-existent email', {
+        endpoint: req.path,
+        method: req.method,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
         email: email.toLowerCase(),
-      }).select('+password');
-
-      if (!organizer) {
-        logger.warn('Login attempt with non-existent email', {
-          endpoint: req.path,
-          method: req.method,
-          ip: req.ip || req.connection.remoteAddress,
-          userAgent: req.get('User-Agent'),
-          email: email.toLowerCase(),
-          attemptType: 'non_existent_email'
-        });
-        return res.status(401).json({
-          error: 'Invalid email or password',
-        });
-      }
-
-      const isPasswordValid = await organizer.comparePassword(password);
-      if (!isPasswordValid) {
-        logger.warn('Login attempt with invalid password', {
-          endpoint: req.path,
-          method: req.method,
-          ip: req.ip || req.connection.remoteAddress,
-          userAgent: req.get('User-Agent'),
-          email: email.toLowerCase(),
-          organizerId: organizer._id,
-          attemptType: 'invalid_password'
-        });
-        return res.status(401).json({
-          error: 'Invalid email or password',
-        });
-      }
-
-      organizer.lastLogin = new Date();
-      await organizer.save();
-
-      const token = generateToken(organizer);
-
-      logger.info(`✓ Organizer logged in: ${email}`);
-
-      res.json({
-        success: true,
-        token,
-        organizer: {
-          id: organizer._id,
-          name: organizer.name,
-          email: organizer.email,
-          role: 'organizer',
-        },
+        attemptType: 'non_existent_email'
       });
-    } catch (error) {
-      logger.error('Login error:', error);
-      res.status(500).json({
-        error: 'Login failed',
-      });
+      return next(new AppError('Invalid email or password', 401));
     }
-  }
+
+    const isPasswordValid = await organizer.comparePassword(password);
+    if (!isPasswordValid) {
+      logger.warn('Login attempt with invalid password', {
+        endpoint: req.path,
+        method: req.method,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        email: email.toLowerCase(),
+        organizerId: organizer._id,
+        attemptType: 'invalid_password'
+      });
+      return next(new AppError('Invalid email or password', 401));
+    }
+
+    organizer.lastLogin = new Date();
+    await organizer.save();
+
+    const token = generateToken(organizer);
+
+    logger.info(`✓ Organizer logged in: ${email}`);
+
+    res.json({
+      success: true,
+      token,
+      organizer: {
+        id: organizer._id,
+        name: organizer.name,
+        email: organizer.email,
+        role: 'organizer',
+      },
+    });
+  })
 );
 
 /* ===========================
    GET CURRENT ORGANIZER (PROTECTED)
 =========================== */
 
-router.get('/me', auth, async (req, res) => {
-  try {
-    const organizer = await Organizer.findById(req.user.id);
+router.get('/me', auth, catchAsync(async (req, res, next) => {
+  const organizer = await Organizer.findById(req.user.id);
 
-    if (!organizer) {
-      return res.status(404).json({
-        error: 'Organizer not found',
-      });
-    }
-
-    res.json({
-      success: true,
-      organizer: {
-        id: organizer._id,
-        name: organizer.name,
-        email: organizer.email,
-        role: 'organizer',
-        createdAt: organizer.createdAt,
-        lastLogin: organizer.lastLogin,
-      },
-    });
-  } catch (error) {
-    logger.error('Profile fetch error:', error);
-    res.status(500).json({
-      error: 'Failed to fetch organizer info',
-    });
+  if (!organizer) {
+    return next(new AppError('Organizer not found', 404));
   }
-});
+
+  res.json({
+    success: true,
+    organizer: {
+      id: organizer._id,
+      name: organizer.name,
+      email: organizer.email,
+      role: 'organizer',
+      createdAt: organizer.createdAt,
+      lastLogin: organizer.lastLogin,
+    },
+  });
+}));
 
 module.exports = router;

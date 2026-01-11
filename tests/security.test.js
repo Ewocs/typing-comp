@@ -1,7 +1,31 @@
 const request = require('supertest');
-const app = require('../src/app');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const mongoose = require('mongoose');
+
+// Mock the database config to prevent immediate connection
+jest.mock('../src/config/database', () => ({}));
+
+let app;
+let mongoServer;
 
 describe('Security Middleware', () => {
+    beforeAll(async () => {
+        mongoServer = await MongoMemoryServer.create();
+        const mongoUri = mongoServer.getUri();
+        process.env.MONGODB_URI = mongoUri;
+
+        // Connect properly
+        await mongoose.connect(mongoUri);
+
+        // Require app after setting up environment
+        app = require('../src/app');
+    });
+
+    afterAll(async () => {
+        await mongoose.disconnect();
+        await mongoServer.stop();
+    });
+
     it('should set Helmet security headers', async () => {
         const res = await request(app).get('/');
         expect(res.headers).toHaveProperty('content-security-policy');
@@ -11,10 +35,6 @@ describe('Security Middleware', () => {
 
     it('should set Rate Limit headers', async () => {
         const res = await request(app).get('/');
-        // standardHeaders: true enables `RateLimit-*` headers (draft-7) or `RateLimit-*` (legacy).
-        // Express-rate-limit v6/7 with standardHeaders: true sends `RateLimit-Limit`, `RateLimit-Remaining`, etc.
-        // Note: The exact header names can vary depending on version/config, but we generally expect some rate limit info.
-        // Let's check for 'ratelimit-limit' which is common.
         expect(res.headers).toHaveProperty('ratelimit-limit');
         expect(res.headers).toHaveProperty('ratelimit-remaining');
     });
@@ -32,8 +52,8 @@ describe('Security Middleware', () => {
                 .send(invalidData);
 
             expect(res.statusCode).toBe(400);
-            expect(res.body.error).toBe('Validation failed');
-            expect(Array.isArray(res.body.details)).toBe(true);
+            expect(res.body.message).toBe('Validation failed');
+            expect(Array.isArray(res.body.errors)).toBe(true);
         });
 
         it('should log validation errors for login', async () => {
@@ -47,8 +67,8 @@ describe('Security Middleware', () => {
                 .send(invalidData);
 
             expect(res.statusCode).toBe(400);
-            expect(res.body.error).toBe('Validation failed');
-            expect(Array.isArray(res.body.details)).toBe(true);
+            expect(res.body.message).toBe('Validation failed');
+            expect(Array.isArray(res.body.errors)).toBe(true);
         });
 
         it('should log failed login attempts', async () => {
@@ -62,7 +82,8 @@ describe('Security Middleware', () => {
                 .send(invalidCredentials);
 
             expect(res.statusCode).toBe(401);
-            expect(res.body.error).toBe('Invalid email or password');
+            expect(res.body.message).toBe('Invalid email or password');
         });
     });
 });
+

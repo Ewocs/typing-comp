@@ -114,31 +114,15 @@ app.get('/exportrankings', (req, res) => {
   res.sendFile(path.join(__dirname, './public/exportrankings.html'));
 });
 
-// API 404 handler
-app.use('/api/*', (req, res) => {
-  res.status(404).json({
-    error: 'API endpoint not found',
-    message: `The API endpoint ${req.originalUrl} does not exist`,
-    timestamp: new Date().toISOString(),
-    docs: '/api-docs'
-  });
+const AppError = require('./utils/appError');
+const globalErrorHandler = require('./middleware/errorController');
+
+// API 404 handler - handle undefined routes
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
-// Catch-all route for HTML pages - 404 handler
-app.get('*', (req, res) => {
-  // Only handle HTML requests with custom 404 page
-  const acceptHeader = req.headers.accept || '';
-  
-  if (acceptHeader.includes('text/html')) {
-    res.status(404).sendFile(path.join(__dirname, './public/404.html'));
-  } else {
-    // For non-HTML requests (API, JSON, etc.)
-    res.status(404).json({
-      error: 'Not Found',
-      message: `The requested resource ${req.originalUrl} was not found on this server`,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+// Global Error Handler
+app.use(globalErrorHandler);
 
 module.exports = app;
