@@ -63,8 +63,6 @@ async function handleStartRound(socket, io, data, activeCompetitions) {
       startTime: Date.now(),
     });
 
-    console.log(`✓ Round ${roundIndex + 1} started`);
-
     // Auto-end after duration
     setTimeout(async () => {
       const competitionDoc = await Competition.findById(competitionId);
@@ -154,7 +152,6 @@ async function handleEndRound(
       roundsCompleted: compData.currentRound + 1,
     });
 
-    console.log(`✓ Round ${roundIndex + 1} ended - Avg ${averageWpm} WPM`);
 
     // Store scores in memory
     compData.participants.forEach((p) => {
@@ -302,8 +299,6 @@ async function handleShowFinalResults(
       await Competition.bulkWrite(bulkOps);
     }
 
-    console.log('✓ Competition completed');
-
     // Emit final results
     io.to(`competition_${competitionId}`).emit('finalResults', {
       rankings: finalRankings.map((r) => ({
@@ -320,7 +315,6 @@ async function handleShowFinalResults(
     // MEMORY LEAK FIX: Cleanup active competition state
     if (activeCompetitions && activeCompetitions.has(competitionId)) {
       activeCompetitions.delete(competitionId);
-      console.log(`✓ [MEMORY] Cleared competition ${competitionId} from memory`);
     }
 
   } catch (error) {
