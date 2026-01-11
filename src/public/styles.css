@@ -2147,14 +2147,6 @@ body {
   .typing-container-improved {
     max-width: 100%;
   }
-
-  /* Mobile scroll to top button */
-  #scrollToTopBtn {
-    bottom: 20px;
-    right: 20px;
-    width: 48px;
-    height: 48px;
-  }
 }
 
 /* Typing input ko Monkeytype jaisa "ghost" banane ke liye */

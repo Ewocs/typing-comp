@@ -119,7 +119,7 @@ router.post(
       name: name.trim(),
       email: email.toLowerCase(),
       password,
-      role: 'organizer', // 👈 RBAC ROLE STORED
+      role: 'organizer',
     });
 
     await organizer.save();

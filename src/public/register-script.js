@@ -24,6 +24,11 @@ registerForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  if (name.length < 2) {
+    showError('Name must be at least 2 characters');
+    return;
+  }
+
   if (password.length < 12) {
     showError('Password must be at least 12 characters');
     return;

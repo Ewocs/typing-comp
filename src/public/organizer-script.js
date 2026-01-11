@@ -114,8 +114,8 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
 }
 
 
-  if (!compName) {
-    alert('Please enter competition name');
+  if (compName.length < 3) {
+    alert('Please enter competition name with at least 3 characters');
     return;
   }
 
@@ -130,8 +130,8 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
     duration: parseInt(document.getElementById(`duration-${index}`).value)
   }));
 
-  if (rounds.some(r => !r.text || r.duration < 10)) {
-    alert('All rounds must have text and duration >= 10s');
+  if (rounds.some(r => r.text.length < 10 || !(30 <= r.duration && r.duration <= 600))) {
+    alert('All rounds must have text minimum of 10 characters and duration between 30 and 600 seconds');
     return;
   }
 

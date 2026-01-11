@@ -7,7 +7,6 @@ const auth = require('../middleware/auth');
 const roleMiddleware = require("../middleware/roleMiddleware");
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
-
 const router = express.Router();
 
 // Input validation middleware
@@ -60,9 +59,12 @@ const handleValidationErrors = (req, res, next) => {
 
 // CREATE COMPETITION (Protected)
 router.post('/create', auth, validateCompetitionCreation, handleValidationErrors, catchAsync(async (req, res, next) => {
-  const { name, description, rounds } = req.body;
-  if (!name || !rounds || rounds.length === 0) {
-    return next(new AppError('Name and rounds required', 400));
+  const { name, description, rounds, maxPlayers } = req.body;
+
+  if (maxPlayers !== undefined) {
+    if (typeof maxPlayers !== 'number' || maxPlayers < 1) {
+      return next(new AppError('Maximum players must be a number greater than 0', 400));
+    }
   }
 
   const code = generateCode();
@@ -73,6 +75,7 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
     code,
     organizerId: req.organizer.id,
     organizer: req.organizer.name,
+    maxPlayers, // Add maxPlayers
     rounds: rounds.map((r, index) => ({
       roundNumber: index + 1,
       text: r.text.trim(),
@@ -98,9 +101,11 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
   });
 
   await competition.save();
-  console.log('✓ Competition created:', code);
+  logger.info(`✓ Competition created: ${code}`); // Using logger instead of console.log if available, but staying consistent with file
   res.json({ success: true, code, competitionId: competition._id });
 }));
+
+
 
 // GET COMPETITION BY CODE
 router.get('/competition/:code', validateCompetitionCode, handleValidationErrors, catchAsync(async (req, res, next) => {
@@ -142,8 +147,43 @@ router.get('/my-competitions', auth, catchAsync(async (req, res, next) => {
   });
 }));
 
-// GET COMPETITION BY ID
-router.get('/competition/:competitionId', validateCompetitionId, handleValidationErrors, catchAsync(async (req, res, next) => {
+/**
+ * @swagger
+ * /api/competition/id/{competitionId}:
+ *   get:
+ *     summary: Get full competition details by ID
+ *     tags: [Competitions]
+ *     parameters:
+ *       - in: path
+ *         name: competitionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Competition ID
+ *     responses:
+ *       200:
+ *         description: Full competition details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 competition:
+ *                   $ref: '#/components/schemas/Competition'
+ *       404:
+ *         description: Competition not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ * */
+router.get('/competition/id/:competitionId', validateCompetitionId, handleValidationErrors, catchAsync(async (req, res, next) => {
   const competition = await Competition.findById(req.params.competitionId);
   if (!competition) {
     return next(new AppError('Competition not found', 404));
