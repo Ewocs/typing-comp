@@ -1,6 +1,6 @@
 # Contributor Debugging Playbook
 
-> A developer-first guide for troubleshooting common issues in College Media
+> A developer-first guide for troubleshooting common issues in typing-comp
 
 This playbook documents common development issues, debugging workflows, and troubleshooting steps to help new and existing contributors quickly identify and fix problems while working on the project.
 
