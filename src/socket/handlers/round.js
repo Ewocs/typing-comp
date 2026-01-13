@@ -1,4 +1,5 @@
 const Competition = require('../../models/Competition');
+const Participant = require('../../models/Participant');
 const { updateAndBroadcastLeaderboard } = require('../utils/leaderboard');
 
 async function handleStartRound(socket, io, data, activeCompetitions) {
@@ -281,22 +282,23 @@ async function handleShowFinalResults(
       const bulkOps = finalRankings.map(ranking => ({
         updateOne: {
           filter: {
-            _id: competitionId,
-            'participants.name': ranking.participantName
+            competitionId: competitionId, // Match Participant document by competitionId
+            name: ranking.participantName // AND participant name
           },
           update: {
             $set: {
-              'participants.$.finalRank': ranking.rank,
-              'participants.$.totalWpm': ranking.averageWpm,
-              'participants.$.totalAccuracy': ranking.averageAccuracy,
-              'participants.$.roundsCompleted': ranking.totalRoundsCompleted,
-              'participants.$.roundScores': ranking.roundScores
+              finalRank: ranking.rank,
+              totalWpm: ranking.averageWpm,
+              totalAccuracy: ranking.averageAccuracy,
+              roundsCompleted: ranking.totalRoundsCompleted,
+              roundScores: ranking.roundScores
             }
           }
         }
       }));
 
-      await Competition.bulkWrite(bulkOps);
+      // TARGET: Participant Model, not Competition
+      await Participant.bulkWrite(bulkOps);
     }
 
     // Emit final results
