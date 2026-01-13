@@ -1,5 +1,40 @@
 const mongoose = require('mongoose');
 
+/**
+ * @typedef {Object} RoundResult
+ * @property {string} participantName - Name of the participant.
+ * @property {string} participantId - Socket ID or User ID.
+ * @property {number} wpm - Words Per Minute.
+ * @property {number} accuracy - Accuracy percentage.
+ * @property {number} correctChars - Count of correct keystrokes.
+ * @property {number} totalChars - Total keystrokes.
+ * @property {number} incorrectChars - Count of wrong keystrokes.
+ * @property {number} errors - Final error count.
+ * @property {number} backspaces - Backspaces usage.
+ * @property {number} rank - Rank in this round.
+ * @property {number} typingTime - Time taken in seconds.
+ * @property {Date} createdAt - Timestamp.
+ * @property {Date} updatedAt - Timestamp.
+ */
+
+/**
+ * @typedef {Object} Round
+ * @property {number} roundNumber - 1-based index.
+ * @property {string} text - The typing challenge text.
+ * @property {number} duration - Time limit in seconds.
+ * @property {string} status - 'pending' | 'in-progress' | 'completed'.
+ * @property {Date} startedAt - Start timestamp.
+ * @property {Date} endedAt - End timestamp.
+ * @property {RoundResult[]} results - Array of results for this round.
+ */
+
+/**
+ * Competition Schema
+ * 
+ * Manages the state, configuration, and flow of a typing battle.
+ * Note: Individual participant stats are OFF-LOADED to the Participant model.
+ * This model contains aggregate round data and configuration.
+ */
 const CompetitionSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   code: { type: String, required: true, unique: true, uppercase: true },
@@ -54,12 +89,11 @@ const CompetitionSchema = new mongoose.Schema({
     },
   ],
 
-
-
   currentRound: { type: Number, default: -1 },
   totalRounds: { type: Number, default: 0 },
   roundsCompleted: { type: Number, default: 0 },
 
+  // Snapshot of final results for quick display
   finalRankings: [
     {
       rank: { type: Number },
@@ -81,6 +115,7 @@ const CompetitionSchema = new mongoose.Schema({
     type: String,
     enum: ['easy', 'medium', 'hard'],
     default: 'medium',
+    // ...
   },
 });
 
