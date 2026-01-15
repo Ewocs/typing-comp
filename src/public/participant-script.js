@@ -1,5 +1,8 @@
 const socket = io();
 
+// Import text manager for multi-language support
+// Note: In browser environment, we'll load this via script tag or inline
+
 let competitionId = null;
 let participantName = null;
 let currentRound = -1;
@@ -7,6 +10,7 @@ let isTestInProgress = false;
 let testStartTime = 0;
 let typingText = '';
 let currentRoundDuration = 0;
+let currentLanguage = 'en'; // Default language
 let totalErrors = 0;
 let backspaceCount = 0;
 let typedChars = [];
@@ -267,6 +271,31 @@ function calculateCorrectChars(input, reference) {
     if (input[i] === reference[i]) correct++;
   }
   return correct;
+}
+
+// Language styling configuration
+const languageStyles = {
+  ar: { direction: 'rtl', fontFamily: 'Arial, sans-serif' },
+  he: { direction: 'rtl', fontFamily: 'Arial, sans-serif' },
+  fa: { direction: 'rtl', fontFamily: 'Arial, sans-serif' },
+  ur: { direction: 'rtl', fontFamily: 'Arial, sans-serif' }
+};
+
+// Apply language-specific styling
+function applyLanguageStyling(language) {
+  const styles = languageStyles[language] || { direction: 'ltr', fontFamily: 'Arial, sans-serif' };
+
+  // Apply direction to text display
+  textDisplay.style.direction = styles.direction;
+  textDisplay.style.fontFamily = styles.fontFamily;
+
+  // Apply direction to typing input
+  typingInput.style.direction = styles.direction;
+  typingInput.style.fontFamily = styles.fontFamily;
+
+  // Add RTL class for additional styling if needed
+  const isRTL = styles.direction === 'rtl';
+  document.body.classList.toggle('rtl-layout', isRTL);
 }
 
 function updateTextDisplay(inputText) {

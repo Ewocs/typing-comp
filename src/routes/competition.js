@@ -82,6 +82,7 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
     rounds: rounds.map((r, index) => ({
       roundNumber: index + 1,
       text: r.text.trim(),
+      language: r.language || 'en',
       duration: r.duration,
       status: 'pending',
       startedAt: null,

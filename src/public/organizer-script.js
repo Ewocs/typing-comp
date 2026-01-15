@@ -45,7 +45,7 @@ let selectedRound = null;
 // Add new round
 addRoundBtn.addEventListener('click', () => {
   const roundIndex = rounds.length;
-  rounds.push({ text: '', duration: 60 });
+  rounds.push({ text: '', language: 'en', duration: 60 });
   renderRounds();
 });
 
@@ -60,6 +60,23 @@ function renderRounds() {
       <div class="round-header">
         <h4>Round ${index + 1}</h4>
         <button class="btn-remove">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Language</label>
+        <select id="language-${index}" class="round-language">
+          <option value="en" ${round.language === 'en' ? 'selected' : ''}>English</option>
+          <option value="es" ${round.language === 'es' ? 'selected' : ''}>Spanish</option>
+          <option value="fr" ${round.language === 'fr' ? 'selected' : ''}>French</option>
+          <option value="de" ${round.language === 'de' ? 'selected' : ''}>German</option>
+          <option value="it" ${round.language === 'it' ? 'selected' : ''}>Italian</option>
+          <option value="pt" ${round.language === 'pt' ? 'selected' : ''}>Portuguese</option>
+          <option value="ru" ${round.language === 'ru' ? 'selected' : ''}>Russian</option>
+          <option value="ar" ${round.language === 'ar' ? 'selected' : ''}>Arabic</option>
+          <option value="hi" ${round.language === 'hi' ? 'selected' : ''}>Hindi</option>
+          <option value="zh" ${round.language === 'zh' ? 'selected' : ''}>Chinese</option>
+          <option value="ja" ${round.language === 'ja' ? 'selected' : ''}>Japanese</option>
+          <option value="ko" ${round.language === 'ko' ? 'selected' : ''}>Korean</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Text to Type</label>
@@ -127,6 +144,7 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
   // Collect updated rounds
   rounds = rounds.map((round, index) => ({
     text: document.getElementById(`text-${index}`).value.trim(),
+    language: document.getElementById(`language-${index}`).value,
     duration: parseInt(document.getElementById(`duration-${index}`).value)
   }));
 

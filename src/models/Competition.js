@@ -19,6 +19,7 @@ const CompetitionSchema = new mongoose.Schema({
     {
       roundNumber: { type: Number, required: true },
       text: { type: String, required: true },
+      language: { type: String, default: 'en', enum: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'hi', 'zh', 'ja', 'ko'] },
       duration: { type: Number, required: true },
       status: {
         type: String,
