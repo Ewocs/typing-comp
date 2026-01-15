@@ -42,11 +42,41 @@ const exportPdfBtn = document.getElementById('exportPdfBtn');
 
 let selectedRound = null;
 
+// Focus management for organizer interface
+function manageOrganizerFocus(elementId) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.focus();
+  }
+}
+
+// Auto-focus first input when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  // Focus first competition input if setup form is visible
+  const compNameInput = document.getElementById('compName');
+  if (compNameInput && !document.getElementById('setupForm').classList.contains('hidden')) {
+    compNameInput.focus();
+  }
+
+  // Focus round selector if control panel is visible
+  const roundSelector = document.getElementById('roundSelector');
+  if (roundSelector && !roundSelector.classList.contains('hidden')) {
+    const firstRoundBtn = roundSelector.querySelector('.round-btn');
+    if (firstRoundBtn) firstRoundBtn.focus();
+  }
+});
+
 // Add new round
 addRoundBtn.addEventListener('click', () => {
   const roundIndex = rounds.length;
   rounds.push({ text: '', duration: 60 });
   renderRounds();
+
+  // Focus the newly added round's text input
+  setTimeout(() => {
+    const newRoundTextInput = document.getElementById(`text-${roundIndex}`);
+    if (newRoundTextInput) newRoundTextInput.focus();
+  }, 100);
 });
 
 // Render rounds UI

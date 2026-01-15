@@ -2,6 +2,15 @@ const registerForm = document.getElementById('registerForm');
 const registerBtn = document.getElementById('registerBtn');
 const errorMessage = document.getElementById('errorMessage');
 
+// Focus management for register page
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-focus first input field
+  const nameInput = document.getElementById('name');
+  if (nameInput) {
+    nameInput.focus();
+  }
+});
+
 function showError(message) {
   errorMessage.textContent = message;
   errorMessage.classList.add('show');

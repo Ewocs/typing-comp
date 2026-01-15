@@ -792,7 +792,7 @@ select.form-control {
   outline-offset: 2px;
 }
 
-/* Enhanced keyboard focus indicators */
+/* Enhanced keyboard focus indicators - WCAG AA Compliant */
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
@@ -801,12 +801,43 @@ a:focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb, 33, 128, 141), 0.25);
+  border-radius: 4px;
 }
 
 /* Focus for interactive elements */
 .nav-link:focus-visible,
 .round-btn:focus-visible,
-.btn:focus-visible {
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-copy:focus-visible,
+.btn-remove:focus-visible,
+.round-btn:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb, 33, 128, 141), 0.25);
+  border-radius: 4px;
+}
+
+/* High contrast focus for better visibility */
+@media (prefers-contrast: high) {
+  :focus-visible {
+    outline: 3px solid var(--color-text);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+/* Focus indicators for form elements */
+.form-control:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb, 33, 128, 141), 0.25);
+  border-color: var(--color-primary);
+}
+
+/* Focus for role switch buttons */
+.role-btn:focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px rgba(var(--color-primary-rgb, 33, 128, 141), 0.25);
