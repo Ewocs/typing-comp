@@ -286,8 +286,8 @@ async function handleShowFinalResults(
       const bulkOps = finalRankings.map(ranking => ({
         updateOne: {
           filter: {
-            competitionId: competitionId,
-            name: ranking.participantName
+            competitionId: competitionId, // Match Participant document by competitionId
+            name: ranking.participantName // AND participant name
           },
           update: {
             $set: {
@@ -301,6 +301,7 @@ async function handleShowFinalResults(
         }
       }));
 
+      // TARGET: Participant Model, not Competition
       await Participant.bulkWrite(bulkOps);
     }
 
