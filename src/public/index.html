@@ -650,7 +650,7 @@
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2026 Typing Competition Platform. Open Source Software.</p>
+                <p id="footer-year"></p>
             </div>
         </div>
     </footer>
@@ -684,7 +684,10 @@
             scrollToTopBtn.addEventListener("click", scrollToTop);
         }
     </script>
-
+    <script>
+        const year = new Date().getFullYear();
+        document.getElementById("footer-year").innerHTML = `© ${year} Typing Competition Platform. All rights reserved.`;
+    </script>
 </body>
 <script src="lightDark.js"></script>
 </html>
