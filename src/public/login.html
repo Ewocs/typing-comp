@@ -109,7 +109,7 @@
       <form id="loginForm">
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" required autocomplete="email">
+          <input type="email" id="email" required autocomplete="email" title="Enter your registered email address to sign in">
         </div>
         
        <div class="form-group">
@@ -120,12 +120,13 @@
               id="password"
               required
               autocomplete="current-password"
+              title="Enter your account password"
             />
-            <span class="eye-icon" id="togglePassword">👁️</span>
+            <span class="eye-icon" id="togglePassword" title="Toggle password visibility">👁️</span>
           </div>
           <div id="forgotMessage" class="error-message"></div>
         </div>
-        <button type="submit" class="btn-primary" id="loginBtn">
+        <button type="submit" class="btn-primary" id="loginBtn" title="Sign in to access the organizer dashboard">
           Login
         </button>
       </form>

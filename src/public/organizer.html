@@ -80,6 +80,7 @@
                 id="compName"
                 placeholder="e.g., TechFest 2025"
                 required
+                title="Enter a descriptive name for your competition"
               />
             </div>
 
@@ -89,6 +90,7 @@
                 type="text"
                 id="compDescription"
                 placeholder="e.g., College typing speed contest"
+                title="Optional description to provide context about the competition"
               />
             </div>
             <div class="form-group">
@@ -98,6 +100,7 @@
                 id="maxPlayers"
                 min="1"
                 placeholder="e.g., 50"
+                title="Set the maximum number of participants (leave empty for unlimited)"
               />
               <small class="helper-text">
                 Leave empty for unlimited participants
@@ -108,12 +111,12 @@
             <div class="rounds-container">
               <h3>🎯 Rounds</h3>
               <div id="roundsList" class="rounds-list"></div>
-              <button type="button" class="btn-secondary" id="addRoundBtn">
+              <button type="button" class="btn-secondary" id="addRoundBtn" title="Add a new round to the competition with custom text and time limit">
                 + Add Round
               </button>
             </div>
 
-            <button type="button" class="btn-primary" id="createCompBtn">
+            <button type="button" class="btn-primary" id="createCompBtn" title="Create the competition and generate a unique 5-letter code for participants to join">
               Create Competition
             </button>
           </div>
@@ -123,8 +126,8 @@
             <h3>✓ Competition Created!</h3>
             <p>Share this code with participants:</p>
             <div class="code-box">
-              <span id="codeValue" class="code-big"></span>
-              <button type="button" class="btn-copy" id="copyBtn">
+              <span id="codeValue" class="code-big" title="This is the unique code participants need to join your competition"></span>
+              <button type="button" class="btn-copy" id="copyBtn" title="Copy the competition code to clipboard for easy sharing">
                 📋 Copy
               </button>
             </div>

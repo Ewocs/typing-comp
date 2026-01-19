@@ -44,8 +44,8 @@
       <header class="header">
         <h1>⚡ TechFest Typing Battle</h1>
         <div class="role-switch">
-          <button class="role-btn active">Participant</button>
-          <button class="role-btn" id="organizerSwitchBtn">Organizer</button>
+          <button class="role-btn active" title="You are currently set as a participant">Participant</button>
+          <button class="role-btn" id="organizerSwitchBtn" title="Switch to organizer mode to create and manage competitions">Organizer</button>
         </div>
       </header>
 
@@ -63,6 +63,7 @@
                 maxlength="5"
                 required
                 autocomplete="off"
+                title="Enter the 5-letter code provided by the competition organizer to join the event"
               />
             </div>
             <div class="form-group">
@@ -73,9 +74,10 @@
                 placeholder="Enter your name"
                 required
                 autocomplete="off"
+                title="Enter your display name that will appear on the leaderboard"
               />
             </div>
-            <button type="button" class="btn-primary" id="joinBtn">
+            <button type="button" class="btn-primary" id="joinBtn" title="Join the competition and start participating in typing rounds">
               Join Competition
             </button>
           </form>
@@ -107,7 +109,7 @@
       <section id="testScreen" class="test-screen-improved hidden">
         <div class="stats-bar-improved">
           <div class="stat-box">
-            <span class="stat-label">WPM</span>
+            <span class="stat-label" title="Words Per Minute - your current typing speed">WPM</span>
             <span class="stat-value" id="wpmDisplay">0</span>
           </div>
 
@@ -141,6 +143,7 @@
             autocorrect="off"
             autocapitalize="off"
             spellcheck="false"
+            title="Type the displayed text exactly. Anti-cheat measures: clipboard disabled, focus loss tracked, server-side validation ensures fair competition"
           />
         </div>
       </section>
@@ -152,7 +155,7 @@
           <div class="personal-results">
             <div class="result-item">
               <span>Your WPM:</span>
-              <strong id="resultWpm">0</strong>
+              <strong id="resultWpm" title="Your final Words Per Minute score for this round">0</strong>
             </div>
             <div class="result-item">
               <span>Your Accuracy :</span>
@@ -177,7 +180,7 @@
         <div class="history-section">
           <div class="history-header">
             <h3>Typing Test History</h3>
-            <button id="clear-history-btn" class="btn-secondary">
+            <button id="clear-history-btn" class="btn-secondary" title="Remove all your previous typing test results from local storage">
               Clear History
             </button>
           </div>
