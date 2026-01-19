@@ -18,6 +18,13 @@ let errorIndices = new Set();
 let keyStats = {};
 let lastKeystrokeTime = 0;
 
+// Network status variables
+let isOnline = navigator.onLine;
+let isConnected = false;
+let reconnectAttempts = 0;
+let maxReconnectAttempts = 5;
+let reconnectInterval = null;
+
 // Audio variables
 let audioContext = null;
 let soundBuffers = {};
@@ -90,6 +97,172 @@ const joinNewCompetitionBtn = document.getElementById('joinNewCompetitionBtn');
 // ====== Monkeytype-style focus ======
 if (textDisplay && typingInput) {
   textDisplay.addEventListener('click', () => typingInput.focus());
+}
+
+// ============= NETWORK STATUS FUNCTIONS =============
+
+// Update network status indicator
+function updateNetworkStatus(online, connected = null) {
+  const networkStatus = document.getElementById('networkStatus');
+  const networkIcon = document.getElementById('networkIcon');
+  const networkText = document.getElementById('networkText');
+
+  if (!networkStatus) return;
+
+  isOnline = online;
+  if (connected !== null) {
+    isConnected = connected;
+  }
+
+  if (!online) {
+    networkStatus.className = 'network-status offline';
+    networkIcon.textContent = '🔴';
+    networkText.textContent = 'Offline';
+  } else if (!isConnected) {
+    networkStatus.className = 'network-status connecting';
+    networkIcon.textContent = '🟡';
+    networkText.textContent = 'Connecting...';
+  } else {
+    networkStatus.className = 'network-status online';
+    networkIcon.textContent = '🟢';
+    networkText.textContent = 'Online';
+  }
+}
+
+// Show error overlay
+function showErrorOverlay(title, message, showRetry = true) {
+  const overlay = document.getElementById('errorOverlay');
+  const titleEl = document.getElementById('errorTitle');
+  const messageEl = document.getElementById('errorMessage');
+  const retryBtn = document.getElementById('retryBtn');
+
+  if (!overlay) return;
+
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  retryBtn.style.display = showRetry ? 'inline-block' : 'none';
+
+  overlay.classList.add('show');
+}
+
+// Hide error overlay
+function hideErrorOverlay() {
+  const overlay = document.getElementById('errorOverlay');
+  if (overlay) {
+    overlay.classList.remove('show');
+  }
+}
+
+// Attempt to reconnect to server
+function attemptReconnect() {
+  if (reconnectAttempts >= maxReconnectAttempts) {
+    showErrorOverlay(
+      'Connection Failed',
+      'Unable to reconnect to the server after multiple attempts. Please refresh the page or check your internet connection.',
+      true
+    );
+    return;
+  }
+
+  reconnectAttempts++;
+  updateNetworkStatus(isOnline, false);
+
+  // Try to reconnect socket
+  socket.connect();
+
+  // Set timeout for reconnection attempt
+  setTimeout(() => {
+    if (!socket.connected) {
+      if (reconnectAttempts < maxReconnectAttempts) {
+        attemptReconnect();
+      }
+    }
+  }, 2000);
+}
+
+// Initialize network monitoring
+function initNetworkMonitoring() {
+  // Initial status
+  updateNetworkStatus(navigator.onLine, socket.connected);
+
+  // Listen for online/offline events
+  window.addEventListener('online', () => {
+    updateNetworkStatus(true, false);
+    if (!socket.connected) {
+      attemptReconnect();
+    }
+  });
+
+  window.addEventListener('offline', () => {
+    updateNetworkStatus(false, false);
+    reconnectAttempts = 0;
+  });
+
+  // Socket connection events
+  socket.on('connect', () => {
+    isConnected = true;
+    reconnectAttempts = 0;
+    updateNetworkStatus(isOnline, true);
+    hideErrorOverlay();
+  });
+
+  socket.on('connect_error', (error) => {
+    isConnected = false;
+    updateNetworkStatus(isOnline, false);
+    console.error('Connection error:', error);
+
+    if (isOnline) {
+      showErrorOverlay(
+        'Connection Error',
+        'Lost connection to the server. Attempting to reconnect...',
+        true
+      );
+    }
+  });
+
+  socket.on('disconnect', (reason) => {
+    isConnected = false;
+    updateNetworkStatus(isOnline, false);
+
+    if (reason === 'io server disconnect') {
+      showErrorOverlay(
+        'Disconnected',
+        'The server disconnected you. This might be due to server maintenance or an error.',
+        true
+      );
+    } else if (reason === 'io client disconnect') {
+      // User intentionally disconnected
+    } else {
+      if (isOnline) {
+        showErrorOverlay(
+          'Connection Lost',
+          'Lost connection to the server. Attempting to reconnect...',
+          true
+        );
+        attemptReconnect();
+      }
+    }
+  });
+
+  // Error overlay buttons
+  const retryBtn = document.getElementById('retryBtn');
+  const dismissBtn = document.getElementById('dismissBtn');
+
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      hideErrorOverlay();
+      if (!socket.connected && isOnline) {
+        reconnectAttempts = 0;
+        attemptReconnect();
+      }
+    });
+  }
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      hideErrorOverlay();
+    });
+  }
 }
 
 // ============= ANTI-CHEATING =============
@@ -674,10 +847,6 @@ socket.on('finalResults', () => {
   completionScreen.classList.remove('hidden');
 });
 
-socket.on('disconnect', () => {
-  showError('Disconnected from server');
-});
-
 // Buttons
 if (joinNewCompetitionBtn) {
   joinNewCompetitionBtn.addEventListener('click', () => {
@@ -778,3 +947,6 @@ function renderHeatmap(keyStats) {
   html += '</div>';
   heatmapContainer.innerHTML = html;
 }
+
+// Initialize network monitoring when page loads
+document.addEventListener('DOMContentLoaded', initNetworkMonitoring);
