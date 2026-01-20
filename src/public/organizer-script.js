@@ -1,4 +1,9 @@
-const socket = io();
+let socket = null;
+try {
+  socket = io();
+} catch (error) {
+  console.warn('Socket.io connection failed:', error);
+}
 
 let competitionId = null;
 let rounds = [];
@@ -225,10 +230,12 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
       // Render round buttons
       renderRoundButtons();
 
-      socket.emit('organizerJoin', {
-        competitionId,
-        code: data.code
-      });
+      if (socket) {
+        socket.emit('organizerJoin', {
+          competitionId,
+          code: data.code
+        });
+      }
     } else {
       alert('Failed to create competition');
     }
@@ -422,85 +429,87 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // Socket events
-socket.on('participantJoined', (data) => {
-  participantCountDisplay.textContent = data.totalParticipants;
-  console.log(`✓ ${data.name} joined`);
-});
+if (socket) {
+  socket.on('participantJoined', (data) => {
+    participantCountDisplay.textContent = data.totalParticipants;
+    console.log(`✓ ${data.name} joined`);
+  });
 
-socket.on('leaderboardUpdate', (data) => {
-  const leaderboard = data.leaderboard;
-  leaderboardContainer.innerHTML = `
-    <h4>🏁 Live Round ${data.roundIndex + 1}</h4>
-    ${leaderboard.map((item, index) => `
-      <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
-        <span class="leaderboard-rank">#${index + 1}</span>
-        <span class="leaderboard-name">${item.name}</span>
-        <span class="leaderboard-stats">
-          <span>🏃 ${item.wpm} WPM</span>
-          <span>🎯 ${item.accuracy}%</span>
-          <span class="text-red">❌ ${item.errors ?? 0}</span>
-          <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
-        </span>
-      </div>
-    `).join('')}
-  `;
-});
-
-socket.on('roundEnded', (data) => {
-  leaderboardContainer.innerHTML = `
-    <h4>✅ Round ${data.roundIndex + 1} - Final Results</h4>
-    ${data.leaderboard.map((item, index) => `
-      <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
-        <span class="leaderboard-rank">#${index + 1}</span>
-        <span class="leaderboard-name">${item.name}</span>
-        <span class="leaderboard-stats">
-          <span>🏃 ${item.wpm} WPM</span>
-          <span>🎯 ${item.accuracy}%</span>
-          <span class="text-red">❌ ${item.errors ?? 0}</span>
-          <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
-        </span>
-      </div>
-    `).join('')}
-  `;
-});
-
-socket.on('finalResults', (data) => {
-  console.log('Final Results:', data.rankings);
-  statusDisplay.textContent = 'Completed';
-  statusDisplay.className = 'status-badge completed';
-  
-  // Show export section
-  exportSection.classList.remove('hidden');
-  
-  leaderboardContainer.innerHTML = `
-    <h4>🏆 Final Rankings 🏆</h4>
-    ${data.rankings.map((item, index) => {
-      const medals = ['🥇', '🥈', '🥉'];
-      const medal = medals[index] || `#${index + 1}`;
-      return `
-        <div class="leaderboard-item final-rank">
-          <span class="medal">${medal}</span>
+  socket.on('leaderboardUpdate', (data) => {
+    const leaderboard = data.leaderboard;
+    leaderboardContainer.innerHTML = `
+      <h4>🏁 Live Round ${data.roundIndex + 1}</h4>
+      ${leaderboard.map((item, index) => `
+        <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
+          <span class="leaderboard-rank">#${index + 1}</span>
           <span class="leaderboard-name">${item.name}</span>
           <span class="leaderboard-stats">
-            <span>Avg: ${item.avgWpm} WPM</span>
-            <span>🎯 ${item.avgAccuracy}%</span>
-            <span class="text-red">❌ ${item.totalErrors ?? 0}</span>
-            <span class="text-yellow">⌫ ${item.totalBackspaces ?? 0}</span>
+            <span>🏃 ${item.wpm} WPM</span>
+            <span>🎯 ${item.accuracy}%</span>
+            <span class="text-red">❌ ${item.errors ?? 0}</span>
+            <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
           </span>
         </div>
-      `;
-    }).join('')}
-  `;
-});
+      `).join('')}
+    `;
+  });
 
-socket.on('error', (data) => {
-  console.error('Error:', data.message);
-  alert('⚠️ Error: ' + data.message);
-});
+  socket.on('roundEnded', (data) => {
+    leaderboardContainer.innerHTML = `
+      <h4>✅ Round ${data.roundIndex + 1} - Final Results</h4>
+      ${data.leaderboard.map((item, index) => `
+        <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
+          <span class="leaderboard-rank">#${index + 1}</span>
+          <span class="leaderboard-name">${item.name}</span>
+          <span class="leaderboard-stats">
+            <span>🏃 ${item.wpm} WPM</span>
+            <span>🎯 ${item.accuracy}%</span>
+            <span class="text-red">❌ ${item.errors ?? 0}</span>
+            <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
+          </span>
+        </div>
+      `).join('')}
+    `;
+  });
 
-socket.on('disconnect', () => {
-  console.log('Disconnected from server');
-});
+  socket.on('finalResults', (data) => {
+    console.log('Final Results:', data.rankings);
+    statusDisplay.textContent = 'Completed';
+    statusDisplay.className = 'status-badge completed';
+    
+    // Show export section
+    exportSection.classList.remove('hidden');
+    
+    leaderboardContainer.innerHTML = `
+      <h4>🏆 Final Rankings 🏆</h4>
+      ${data.rankings.map((item, index) => {
+        const medals = ['🥇', '🥈', '🥉'];
+        const medal = medals[index] || `#${index + 1}`;
+        return `
+          <div class="leaderboard-item final-rank">
+            <span class="medal">${medal}</span>
+            <span class="leaderboard-name">${item.name}</span>
+            <span class="leaderboard-stats">
+              <span>Avg: ${item.avgWpm} WPM</span>
+              <span>🎯 ${item.avgAccuracy}%</span>
+              <span class="text-red">❌ ${item.totalErrors ?? 0}</span>
+              <span class="text-yellow">⌫ ${item.totalBackspaces ?? 0}</span>
+            </span>
+          </div>
+        `;
+      }).join('')}
+    `;
+  });
+
+  socket.on('error', (data) => {
+    console.error('Error:', data.message);
+    alert('⚠️ Error: ' + data.message);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+  });
+}
 
 // Display organizer name
 const organizerName = localStorage.getItem('organizerName');
