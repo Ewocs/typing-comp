@@ -27,9 +27,25 @@ function getAuthHeaders() {
 // DOM Elements
 const compNameInput = document.getElementById('compName');
 const compDescriptionInput = document.getElementById('compDescription');
+const competitionModeSelect = document.getElementById('competitionMode');
+const modeConfig = document.getElementById('modeConfig');
+const timedConfig = document.getElementById('timedConfig');
+const wordCountConfig = document.getElementById('wordCountConfig');
+const timeLimitInput = document.getElementById('timeLimit');
+const timedTextInput = document.getElementById('timedText');
+const targetWordsInput = document.getElementById('targetWords');
+const textPoolContainer = document.getElementById('textPoolContainer');
+const addTextBtn = document.getElementById('addTextBtn');
+const roundsSection = document.getElementById('roundsSection');
 const addRoundBtn = document.getElementById('addRoundBtn');
 const roundsList = document.getElementById('roundsList');
 const createCompBtn = document.getElementById('createCompBtn');
+const competitionControls = document.getElementById('competitionControls');
+const roundsControls = document.getElementById('roundsControls');
+const singleControls = document.getElementById('singleControls');
+const startCompetitionBtn = document.getElementById('startCompetitionBtn');
+const competitionModeText = document.getElementById('competitionModeText');
+const competitionConfigText = document.getElementById('competitionConfigText');
 const codeDisplay = document.getElementById('codeDisplay');
 const codeValue = document.getElementById('codeValue');
 const roundSelector = document.getElementById('roundSelector');
@@ -46,6 +62,62 @@ const exportExcelBtn = document.getElementById('exportExcelBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 
 let selectedRound = null;
+let textPoolItems = [];
+
+// Mode selection handler
+competitionModeSelect.addEventListener('change', (e) => {
+  const mode = e.target.value;
+
+  // Hide all mode configs
+  timedConfig.classList.add('hidden');
+  wordCountConfig.classList.add('hidden');
+  roundsSection.classList.remove('show');
+
+  // Show relevant config based on mode
+  if (mode === 'timed') {
+    timedConfig.classList.remove('hidden');
+  } else if (mode === 'word-count') {
+    wordCountConfig.classList.remove('hidden');
+  } else if (mode === 'rounds') {
+    roundsSection.classList.add('show');
+  }
+});
+
+// Text pool management
+function addTextPoolItem(text = '') {
+  const itemDiv = document.createElement('div');
+  itemDiv.className = 'text-pool-item';
+
+  const textarea = document.createElement('textarea');
+  textarea.className = 'textPoolText';
+  textarea.rows = 3;
+  textarea.placeholder = `Enter text #${textPoolItems.length + 1} for the pool...`;
+  textarea.value = text;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn-remove-text';
+  removeBtn.title = 'Remove this text';
+  removeBtn.textContent = '✕';
+  removeBtn.addEventListener('click', () => {
+    textPoolContainer.removeChild(itemDiv);
+    textPoolItems = textPoolItems.filter(item => item !== textarea);
+  });
+
+  itemDiv.appendChild(textarea);
+  itemDiv.appendChild(removeBtn);
+  textPoolContainer.appendChild(itemDiv);
+  textPoolItems.push(textarea);
+
+  return textarea;
+}
+
+addTextBtn.addEventListener('click', () => {
+  addTextPoolItem();
+});
+
+// Initialize with one text pool item
+addTextPoolItem();
 
 // Focus management for organizer interface
 function manageOrganizerFocus(elementId) {
@@ -155,50 +227,100 @@ function removeRound(index) {
 createCompBtn.addEventListener('click', async () => {
   const compName = compNameInput.value.trim();
   const compDescription = compDescriptionInput.value.trim();
- const maxPlayersInput = document.getElementById("maxPlayers");
-const maxPlayers = maxPlayersInput && maxPlayersInput.value
-  ? parseInt(maxPlayersInput.value, 10)
-  : null;
-
-  if (maxPlayers !== null && (isNaN(maxPlayers) || maxPlayers < 1)) {
-  alert("Maximum players must be a number greater than 0");
-  return;
-}
-
+  const mode = competitionModeSelect.value;
+  const maxPlayersInput = document.getElementById("maxPlayers");
+  const maxPlayers = maxPlayersInput && maxPlayersInput.value
+    ? parseInt(maxPlayersInput.value, 10)
+    : null;
 
   if (compName.length < 3) {
     alert('Please enter competition name with at least 3 characters');
     return;
   }
 
-  if (rounds.length === 0) {
-    alert('Please add at least one round');
+  if (maxPlayers !== null && (isNaN(maxPlayers) || maxPlayers < 1)) {
+    alert("Maximum players must be a number greater than 0");
     return;
   }
 
-  // Collect updated rounds
-  rounds = rounds.map((round, index) => ({
-    text: document.getElementById(`text-${index}`).value.trim(),
-    language: document.getElementById(`language-${index}`).value,
-    duration: parseInt(document.getElementById(`duration-${index}`).value)
-  }));
+  const competitionData = {
+    name: compName,
+    description: compDescription,
+    mode,
+    maxPlayers
+  };
 
-  if (rounds.some(r => r.text.length < 10 || !(30 <= r.duration && r.duration <= 600))) {
-    alert('All rounds must have text minimum of 10 characters and duration between 30 and 600 seconds');
-    return;
+  // Mode-specific validation and data collection
+  if (mode === 'rounds') {
+    if (rounds.length === 0) {
+      alert('Please add at least one round');
+      return;
+    }
+
+    // Collect updated rounds
+    competitionData.rounds = rounds.map((round, index) => ({
+      text: document.getElementById(`text-${index}`).value.trim(),
+      language: document.getElementById(`language-${index}`).value,
+      duration: parseInt(document.getElementById(`duration-${index}`).value)
+    }));
+
+    if (competitionData.rounds.some(r => r.text.length < 10 || !(30 <= r.duration && r.duration <= 600))) {
+      alert('All rounds must have text minimum of 10 characters and duration between 30 and 600 seconds');
+      return;
+    }
+
+  } else if (mode === 'timed') {
+    const timeLimit = parseInt(timeLimitInput.value);
+    const text = timedTextInput.value.trim();
+
+    if (!timeLimit || timeLimit < 30 || timeLimit > 3600) {
+      alert('Time limit must be between 30 and 3600 seconds');
+      return;
+    }
+
+    if (text.length < 10) {
+      alert('Challenge text must be at least 10 characters');
+      return;
+    }
+
+    competitionData.modeConfig = {
+      timeLimit,
+      textPool: [text] // Store as text pool for consistency
+    };
+
+  } else if (mode === 'word-count') {
+    const targetWords = parseInt(targetWordsInput.value);
+    const textPool = textPoolItems.map(textarea => textarea.value.trim()).filter(text => text.length > 0);
+
+    if (!targetWords || targetWords < 10 || targetWords > 1000) {
+      alert('Target words must be between 10 and 1000');
+      return;
+    }
+
+    if (textPool.length === 0) {
+      alert('Please add at least one text to the pool');
+      return;
+    }
+
+    if (textPool.some(text => text.length < 10)) {
+      alert('All texts in the pool must be at least 10 characters');
+      return;
+    }
+
+    competitionData.modeConfig = {
+      targetWords,
+      textPool
+    };
   }
 
   try {
+    createCompBtn.disabled = true;
+    createCompBtn.textContent = 'Creating...';
+
     const response = await fetch('/api/create', {
       method: 'POST',
       headers: getAuthHeaders(),
-    body: JSON.stringify({
-  name: compName,
-  description: compDescription,
-  rounds,
-  maxPlayers // 👈 ADD THIS
-})
-
+      body: JSON.stringify(competitionData)
     });
 
     const data = await response.json();
@@ -221,14 +343,31 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
       codeDisplay.classList.add('show');
 
       // Show control panel elements
-      roundSelector.classList.remove('hidden');
       compInfo.classList.remove('hidden');
+      competitionControls.classList.remove('hidden');
 
       compNameDisplay.textContent = compName;
       statusDisplay.textContent = 'Ready';
 
-      // Render round buttons
-      renderRoundButtons();
+      // Show appropriate controls based on mode
+      const competitionMode = data.mode || 'rounds';
+      if (competitionMode === 'rounds') {
+        roundsControls.classList.remove('hidden');
+        singleControls.classList.add('hidden');
+        renderRoundButtons();
+      } else {
+        roundsControls.classList.add('hidden');
+        singleControls.classList.remove('hidden');
+
+        // Set mode-specific text
+        if (competitionMode === 'timed') {
+          competitionModeText.textContent = '⏱️ Timed Challenge Mode';
+          competitionConfigText.textContent = `Time Limit: ${competitionData.modeConfig.timeLimit} seconds`;
+        } else if (competitionMode === 'word-count') {
+          competitionModeText.textContent = '📝 Word Count Challenge Mode';
+          competitionConfigText.textContent = `Target: ${competitionData.modeConfig.targetWords} words`;
+        }
+      }
 
       if (socket) {
         socket.emit('organizerJoin', {
@@ -236,12 +375,17 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
           code: data.code
         });
       }
+
+      alert(`Competition created successfully! Mode: ${competitionMode}`);
     } else {
-      alert('Failed to create competition');
+      alert('Failed to create competition: ' + (data.message || 'Unknown error'));
     }
   } catch (error) {
     console.error('Error:', error);
     alert('Connection error');
+  } finally {
+    createCompBtn.disabled = false;
+    createCompBtn.textContent = 'Create Competition';
   }
 });
 
@@ -633,5 +777,22 @@ exportPdfBtn.addEventListener('click', async () => {
     html2pdf().set(options).from(element).save();
   } catch (error) {
     alert('Error generating PDF: ' + error.message);
+  }
+});
+
+// Start competition (for timed and word-count modes)
+startCompetitionBtn.addEventListener('click', () => {
+  if (!competitionId) {
+    alert('No competition selected');
+    return;
+  }
+
+  if (socket) {
+    startCompetitionBtn.disabled = true;
+    startCompetitionBtn.textContent = 'Starting...';
+
+    socket.emit('startCompetition', {
+      competitionId
+    });
   }
 });

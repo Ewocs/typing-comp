@@ -2,6 +2,7 @@ const logger = require('../config/logger');
 const { handleJoin, handleOrganizerJoin } = require('./handlers/join');
 const { handleProgress } = require('./handlers/typing');
 const { handleStartRound } = require('./handlers/round');
+const { handleStartCompetition } = require('./handlers/competition');
 const Participant = require('../models/Participant');
 
 const activeCompetitions = new Map();
@@ -25,13 +26,22 @@ function initializeSocketEvents(io) {
       handleOrganizerJoin(socket, io, data);
     });
 
-    // START ROUND
+    // START ROUND (for rounds mode)
     socket.on('startRound', (data) => {
       logger.info('Start round event received', {
         competitionId: data.competitionId,
         roundIndex: data.roundIndex,
       });
       handleStartRound(socket, io, data, activeCompetitions);
+    });
+
+    // START COMPETITION (for timed and word-count modes)
+    socket.on('startCompetition', (data) => {
+      logger.info('Start competition event received', {
+        competitionId: data.competitionId,
+        mode: data.mode,
+      });
+      handleStartCompetition(socket, io, data, activeCompetitions);
     });
 
     // TYPING PROGRESS

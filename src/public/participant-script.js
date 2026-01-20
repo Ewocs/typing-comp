@@ -281,14 +281,24 @@ function updateTypingStats() {
     progressPercentage.textContent = progress + '%';
   }
 
+  // Check if we need to emit word count progress for word-count mode
+  // This would be determined by checking if the competition mode is word-count
+  // For now, we'll emit the standard progress
   socket.emit('progress', {
     competitionId,
     correctChars,
     totalChars,
     errors: totalErrors,
     backspaces: backspaceCount,
-    keyStats: keyStats
+    keyStats: keyStats,
+    wordsTyped: calculateWordsTyped(inputText)
   });
+}
+
+// Calculate words typed (basic implementation)
+function calculateWordsTyped(inputText) {
+  if (!inputText.trim()) return 0;
+  return inputText.trim().split(/\s+/).length;
 }
 
 // ============= SUPPORTING FUNCTIONS =============
@@ -585,6 +595,38 @@ socket.on('roundStarted', (data) => {
   startTimer(data.duration);
 });
 
+// Handle competition started (for timed and word-count modes)
+socket.on('competitionStarted', (data) => {
+  typingText = data.text;
+
+  typedChars = [];
+  totalErrors = 0;
+  backspaceCount = 0;
+  errorIndices.clear();
+  keyStats = {};
+  lastKeystrokeTime = 0;
+
+  manageScreenFocus('testScreen');
+
+  typingInput.value = '';
+  typingInput.disabled = false;
+
+  updateTextDisplay('');
+  wpmDisplay.textContent = '0';
+  accuracyDisplay.textContent = '100%';
+
+  isTestInProgress = true;
+  testStartTime = Date.now();
+
+  // Start timer for timed mode, or show word count for word-count mode
+  if (data.mode === 'timed') {
+    startTimer(data.timeLimit);
+  } else if (data.mode === 'word-count') {
+    // For word-count mode, show word count instead of timer
+    timerDisplay.textContent = `Words: 0/${data.targetWords}`;
+  }
+});
+
 socket.on('roundEnded', (data) => {
   isTestInProgress = false;
   typingInput.disabled = true;
@@ -644,6 +686,62 @@ socket.on('roundEnded', (data) => {
     resultsScreen.style.justifyContent = '';
     resultsScreen.style.alignItems = '';
     resultsScreen.style.minHeight = '';
+  }
+});
+
+socket.on('competitionEnded', (data) => {
+  isTestInProgress = false;
+  typingInput.disabled = true;
+
+  manageScreenFocus('resultsScreen');
+
+  const personalResult = data.finalResults.find(
+    item => item.participantName === participantName
+  );
+
+  if (personalResult) {
+    document.getElementById('resultWpm').textContent = personalResult.wpm;
+    document.getElementById('resultAccuracy').textContent = personalResult.accuracy + '%';
+    document.getElementById('resultErrors').textContent = personalResult.errors;
+    document.getElementById('resultBackspaces').textContent = personalResult.backspaces;
+
+    saveResultToHistory({
+      wpm: personalResult.wpm,
+      accuracy: personalResult.accuracy,
+      characters: typedChars.length,
+      timeTaken: currentRoundDuration,
+      date: new Date().toLocaleString(),
+    });
+
+    renderResultHistory();
+
+    // RENDER HEATMAP
+    if (personalResult.keyStats) {
+      renderHeatmap(personalResult.keyStats);
+    }
+
+    // Hide EVERYTHING else (Results Card & History) as per user request
+    const resultsCard = document.querySelector('.results-card');
+    if (resultsCard) resultsCard.classList.add('hidden');
+
+    const historySection = document.querySelector('.history-section');
+    if (historySection) historySection.classList.add('hidden');
+
+    // Add 'Join New Competition' button directly to Heatmap Container
+    const heatmapContainer = document.getElementById('heatmapContainer');
+    if (heatmapContainer && !document.getElementById('resScreenJoinBtn')) {
+      const joinBtn = document.createElement('button');
+      joinBtn.id = 'resScreenJoinBtn';
+      joinBtn.className = 'btn-primary';
+      joinBtn.textContent = 'Join New Competition';
+      joinBtn.style.marginTop = '30px';
+      joinBtn.onclick = () => window.location.href = '/participant';
+
+      heatmapContainer.appendChild(joinBtn);
+    }
+
+    // Center the heatmap on screen
+    resultsScreen.classList.add('results-split-view');
   }
 });
 

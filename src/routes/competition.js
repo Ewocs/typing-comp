@@ -23,14 +23,45 @@ const validateCompetitionCreation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Description cannot exceed 500 characters'),
+  body('mode')
+    .optional()
+    .isIn(['rounds', 'timed', 'word-count'])
+    .withMessage('Mode must be one of: rounds, timed, word-count'),
+  body('modeConfig')
+    .optional()
+    .isObject()
+    .withMessage('Mode configuration must be an object'),
+  body('modeConfig.timeLimit')
+    .optional()
+    .isInt({ min: 30, max: 3600 })
+    .withMessage('Time limit must be between 30 and 3600 seconds'),
+  body('modeConfig.targetWords')
+    .optional()
+    .isInt({ min: 10, max: 1000 })
+    .withMessage('Target words must be between 10 and 1000'),
+  body('modeConfig.textPool')
+    .optional()
+    .isArray({ min: 1, max: 50 })
+    .withMessage('Text pool must contain 1-50 texts'),
+  body('modeConfig.textPool.*')
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 2000 })
+    .withMessage('Each text in pool must be between 10 and 2000 characters'),
   body('rounds')
+    .if(body('mode').not().equals('rounds'))
+    .optional()
+    .custom(() => true) // Skip validation for non-rounds modes
+    .if(body('mode').equals('rounds'))
     .isArray({ min: 1, max: 10 })
-    .withMessage('At least 1 round is required, maximum 10 rounds allowed'),
+    .withMessage('At least 1 round is required for rounds mode, maximum 10 rounds allowed'),
   body('rounds.*.text')
+    .if(body('mode').equals('rounds'))
     .trim()
     .isLength({ min: 10, max: 2000 })
     .withMessage('Round text must be between 10 and 2000 characters'),
   body('rounds.*.duration')
+    .if(body('mode').equals('rounds'))
     .isInt({ min: 30, max: 600 })
     .withMessage('Round duration must be between 30 and 600 seconds')
 ];
@@ -60,7 +91,24 @@ const handleValidationErrors = (req, res, next) => {
 
 // CREATE COMPETITION (Protected)
 router.post('/create', auth, validateCompetitionCreation, handleValidationErrors, catchAsync(async (req, res, next) => {
-  const { name, description, rounds, maxPlayers } = req.body;
+  const { name, description, mode = 'rounds', modeConfig = {}, rounds, maxPlayers } = req.body;
+
+  // Validate mode-specific requirements
+  if (mode === 'timed' && (!modeConfig.timeLimit || modeConfig.timeLimit < 30)) {
+    return next(new AppError('Timed mode requires a time limit of at least 30 seconds', 400));
+  }
+
+  if (mode === 'word-count' && (!modeConfig.targetWords || modeConfig.targetWords < 10)) {
+    return next(new AppError('Word count mode requires a target of at least 10 words', 400));
+  }
+
+  if (mode === 'word-count' && (!modeConfig.textPool || modeConfig.textPool.length === 0)) {
+    return next(new AppError('Word count mode requires at least one text in the pool', 400));
+  }
+
+  if (mode === 'rounds' && (!rounds || rounds.length === 0)) {
+    return next(new AppError('Rounds mode requires at least one round', 400));
+  }
 
   if (maxPlayers !== undefined) {
     if (typeof maxPlayers !== 'number' || maxPlayers < 1) {
@@ -68,18 +116,30 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
     }
   }
 
-  logger.info(`Generaring competition code for organizer: ${req.organizer.id}`);
+  logger.info(`Generating competition code for organizer: ${req.organizer.id}`);
   const code = generateCode();
   logger.info(`Competition code generated: ${code}`);
 
-  const competition = new Competition({
+  const competitionData = {
     name: name.trim(),
     description: description ? description.trim() : '',
     code,
     organizerId: req.organizer.id,
     organizer: req.organizer.name,
-    maxPlayers, // Add maxPlayers
-    rounds: rounds.map((r, index) => ({
+    mode,
+    modeConfig,
+    maxPlayers,
+    status: 'pending',
+    currentRound: -1,
+    totalRounds: 0,
+    roundsCompleted: 0,
+    finalRankings: [],
+    createdAt: new Date(),
+  };
+
+  // Add rounds only for rounds mode
+  if (mode === 'rounds' && rounds) {
+    competitionData.rounds = rounds.map((r, index) => ({
       roundNumber: index + 1,
       text: r.text.trim(),
       language: r.language || 'en',
@@ -95,18 +155,15 @@ router.post('/create', auth, validateCompetitionCreation, handleValidationErrors
       averageAccuracy: 0,
       results: [],
       createdAt: new Date(),
-    })),
-    status: 'pending',
-    currentRound: -1,
-    totalRounds: rounds.length,
-    roundsCompleted: 0,
-    finalRankings: [],
-    createdAt: new Date(),
-  });
+    }));
+    competitionData.totalRounds = rounds.length;
+  }
+
+  const competition = new Competition(competitionData);
 
   await competition.save();
-  logger.info(`✓ Competition created successfully with code: ${code}`);
-  res.json({ success: true, code, competitionId: competition._id });
+  logger.info(`✓ Competition created successfully with code: ${code} (mode: ${mode})`);
+  res.json({ success: true, code, competitionId: competition._id, mode });
 }));
 
 

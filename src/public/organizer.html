@@ -36,6 +36,112 @@
         #scrollToTopBtn:active {
             transform: translateY(-1px);
         }
+
+        /* Competition Mode Styles */
+        .mode-config {
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--color-bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+        }
+
+        .mode-config-section {
+            margin-bottom: 20px;
+        }
+
+        .mode-config-section h4 {
+            color: var(--color-primary);
+            margin-bottom: 15px;
+            font-size: var(--font-size-lg);
+        }
+
+        .text-pool-container {
+            margin: 10px 0;
+        }
+
+        .text-pool-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: flex-end;
+        }
+
+        .text-pool-item textarea {
+            flex: 1;
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .btn-remove-text {
+            background: var(--color-error);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-remove-text:hover {
+            background: var(--color-error-hover);
+        }
+
+        /* Hide rounds section by default */
+        #roundsSection {
+            display: none;
+        }
+
+        #roundsSection.show {
+            display: block;
+        }
+
+        /* Competition Controls */
+        .competition-controls {
+            margin-bottom: 20px;
+        }
+
+        .mode-controls {
+            margin-top: 15px;
+        }
+
+        .competition-details {
+            background: var(--color-bg-secondary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .mode-text {
+            font-weight: bold;
+            color: var(--color-primary);
+            margin-bottom: 5px;
+        }
+
+        .config-text {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        #roundsControls {
+            display: block;
+        }
+
+        #singleControls {
+            display: none;
+        }
+
+        #singleControls.show {
+            display: block;
+        }
+
+        #roundsControls.hidden {
+            display: none;
+        }
     </style>
   </head>
   <body class="dark-theme">
@@ -93,6 +199,95 @@
                 title="Optional description to provide context about the competition"
               />
             </div>
+
+            <!-- COMPETITION MODE SELECTION -->
+            <div class="form-group">
+              <label for="competitionMode">Competition Mode</label>
+              <select id="competitionMode" required title="Choose the type of competition">
+                <option value="rounds">🎯 Round-Based (Traditional)</option>
+                <option value="timed">⏱️ Timed Challenge</option>
+                <option value="word-count">📝 Word Count Challenge</option>
+              </select>
+              <small class="helper-text">
+                Select the competition format that best fits your needs
+              </small>
+            </div>
+
+            <!-- MODE-SPECIFIC CONFIGURATION -->
+            <div id="modeConfig" class="mode-config">
+              <!-- TIMED MODE CONFIG -->
+              <div id="timedConfig" class="mode-config-section hidden">
+                <h4>⏱️ Timed Challenge Settings</h4>
+                <div class="form-group">
+                  <label for="timeLimit">Time Limit (seconds)</label>
+                  <input
+                    type="number"
+                    id="timeLimit"
+                    min="30"
+                    max="3600"
+                    value="300"
+                    placeholder="300"
+                    title="How long participants have to type (30-3600 seconds)"
+                  />
+                  <small class="helper-text">
+                    All participants type for this fixed time period
+                  </small>
+                </div>
+                <div class="form-group">
+                  <label for="timedText">Challenge Text</label>
+                  <textarea
+                    id="timedText"
+                    rows="4"
+                    placeholder="Enter the text that all participants will type..."
+                    title="The text participants will compete on"
+                  ></textarea>
+                  <small class="helper-text">
+                    Participants will be ranked by WPM and accuracy achieved within the time limit
+                  </small>
+                </div>
+              </div>
+
+              <!-- WORD COUNT MODE CONFIG -->
+              <div id="wordCountConfig" class="mode-config-section hidden">
+                <h4>📝 Word Count Challenge Settings</h4>
+                <div class="form-group">
+                  <label for="targetWords">Target Word Count</label>
+                  <input
+                    type="number"
+                    id="targetWords"
+                    min="10"
+                    max="1000"
+                    value="100"
+                    placeholder="100"
+                    title="Number of words participants must type (10-1000)"
+                  />
+                  <small class="helper-text">
+                    Participants must reach this word count to complete the challenge
+                  </small>
+                </div>
+                <div class="form-group">
+                  <label>Text Pool</label>
+                  <div id="textPoolContainer" class="text-pool-container">
+                    <div class="text-pool-item">
+                      <textarea
+                        class="textPoolText"
+                        rows="3"
+                        placeholder="Enter text #1 for the pool..."
+                        title="Text that participants can be assigned"
+                      ></textarea>
+                      <button type="button" class="btn-remove-text" title="Remove this text">✕</button>
+                    </div>
+                  </div>
+                  <button type="button" class="btn-secondary" id="addTextBtn" title="Add another text to the pool">
+                    + Add Text
+                  </button>
+                  <small class="helper-text">
+                    Participants will be randomly assigned a text from this pool. Add multiple texts for variety.
+                  </small>
+                </div>
+              </div>
+            </div>
+
             <div class="form-group">
               <label for="maxPlayers">Maximum Players</label>
               <input
@@ -107,8 +302,8 @@
               </small>
             </div>
 
-            <!-- ROUNDS SECTION -->
-            <div class="rounds-container">
+            <!-- ROUNDS SECTION (only for rounds mode) -->
+            <div id="roundsSection" class="rounds-container">
               <h3>🎯 Rounds</h3>
               <div id="roundsList" class="rounds-list"></div>
               <button type="button" class="btn-secondary" id="addRoundBtn" title="Add a new round to the competition with custom text and time limit">
@@ -183,34 +378,53 @@
             </a>
           </div>
 
-          <!-- ROUND SELECTOR -->
-          <div id="roundSelector" class="round-selector hidden">
-            <h3>🎮 Manage Rounds</h3>
+          <!-- COMPETITION CONTROLS -->
+          <div id="competitionControls" class="competition-controls hidden">
+            <h3 id="controlTitle">🎮 Competition Control</h3>
 
-            <div class="round-list-control">
-              <div id="roundButtonsList"></div>
+            <!-- ROUNDS MODE CONTROLS -->
+            <div id="roundsControls" class="mode-controls">
+              <div class="round-list-control">
+                <div id="roundButtonsList"></div>
+              </div>
+
+              <div class="round-details">
+                <p id="selectedRoundText" class="round-text-preview">
+                  Select a round to view details
+                </p>
+                <p id="selectedRoundTime" class="round-time"></p>
+              </div>
+
+              <button
+                type="button"
+                class="btn-primary"
+                id="startRoundBtn"
+                disabled
+              >
+                Start Selected Round
+              </button>
             </div>
 
-            <div class="round-details">
-              <p id="selectedRoundText" class="round-text-preview">
-                Select a round to view details
-              </p>
-              <p id="selectedRoundTime" class="round-time"></p>
-            </div>
+            <!-- TIMED/WORD-COUNT MODE CONTROLS -->
+            <div id="singleControls" class="mode-controls hidden">
+              <div class="competition-details">
+                <p id="competitionModeText" class="mode-text"></p>
+                <p id="competitionConfigText" class="config-text"></p>
+              </div>
 
-            <button
-              type="button"
-              class="btn-primary"
-              id="startRoundBtn"
-              disabled
-            >
-              Start Selected Round
-            </button>
+              <button
+                type="button"
+                class="btn-primary"
+                id="startCompetitionBtn"
+              >
+                Start Competition
+              </button>
+            </div>
 
             <!-- ROUND STATUS -->
             <div id="roundStatus" class="round-status hidden">
               <div class="status-content">
-                <p>Round <span id="roundNumber">-</span> In Progress</p>
+                <p id="statusText">Competition In Progress</p>
                 <p class="timer">⏱️ <span id="roundTimer">0</span>s</p>
                 <div class="progress-bar">
                   <div id="progressFill"></div>

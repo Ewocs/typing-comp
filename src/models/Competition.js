@@ -44,6 +44,20 @@ const CompetitionSchema = new mongoose.Schema({
     ref: 'Organizer',
     default: null,
   },
+  mode: {
+    type: String,
+    enum: ['rounds', 'timed', 'word-count'],
+    default: 'rounds',
+  },
+  // Mode-specific configuration
+  modeConfig: {
+    // For timed mode: fixed time limit for all participants
+    timeLimit: { type: Number, default: null }, // in seconds
+    // For word-count mode: target word count
+    targetWords: { type: Number, default: null },
+    // For word-count mode: text pool (array of texts to choose from)
+    textPool: [{ type: String }],
+  },
   status: {
     type: String,
     enum: ['pending', 'ongoing', 'completed'],
@@ -52,10 +66,10 @@ const CompetitionSchema = new mongoose.Schema({
 
   rounds: [
     {
-      roundNumber: { type: Number, required: true },
-      text: { type: String, required: true },
+      roundNumber: { type: Number, required: function() { return this.mode === 'rounds'; } },
+      text: { type: String, required: function() { return this.mode === 'rounds'; } },
       language: { type: String, default: 'en', enum: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ar', 'hi', 'zh', 'ja', 'ko'] },
-      duration: { type: Number, required: true },
+      duration: { type: Number, required: function() { return this.mode === 'rounds'; } },
       status: {
         type: String,
         enum: ['pending', 'in-progress', 'completed'],
