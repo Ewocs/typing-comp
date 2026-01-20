@@ -50,6 +50,10 @@
           <button class="role-btn active" title="You are currently set as a participant">Participant</button>
           <button class="role-btn" id="organizerSwitchBtn" title="Switch to organizer mode to create and manage competitions">Organizer</button>
         </div>
+        <div id="connectionStatus" class="connection-status">
+          <span id="statusIcon">🔄</span>
+          <span id="statusText">Connecting...</span>
+        </div>
       </header>
 
       <!-- JOIN SCREEN -->
@@ -236,6 +240,7 @@
     <button id="scrollToTopBtn" title="Go to top">↑</button>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.js"></script>
+    <script src="network-manager.js"></script>
     <script src="participant-script.js"></script>
     
     <script>

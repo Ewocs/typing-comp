@@ -5,6 +5,9 @@ try {
   console.warn('Socket.io connection failed:', error);
 }
 
+// Initialize network manager for offline detection and error handling
+const networkManager = new NetworkManager();
+
 let competitionId = null;
 let rounds = [];
 let competitionCode = null;
@@ -45,7 +48,48 @@ const exportSection = document.getElementById('exportSection');
 const exportExcelBtn = document.getElementById('exportExcelBtn');
 const exportPdfBtn = document.getElementById('exportPdfBtn');
 
+// Connection status elements
+const connectionStatus = document.getElementById('connectionStatus');
+const statusIcon = document.getElementById('statusIcon');
+const statusText = document.getElementById('statusText');
+
 let selectedRound = null;
+
+// ================= CONNECTION STATUS MANAGEMENT =================
+function updateConnectionStatus(status, isOnline) {
+  if (!connectionStatus) return;
+
+  connectionStatus.className = `connection-status ${status}`;
+
+  switch (status) {
+    case 'connected':
+      statusIcon.textContent = '🟢';
+      statusText.textContent = 'Connected';
+      break;
+    case 'connecting':
+      statusIcon.textContent = '🔄';
+      statusText.textContent = 'Connecting...';
+      break;
+    case 'disconnected':
+      statusIcon.textContent = '🔴';
+      statusText.textContent = isOnline ? 'Disconnected' : 'Offline';
+      break;
+    case 'reconnecting':
+      statusIcon.textContent = '🟡';
+      statusText.textContent = 'Reconnecting...';
+      break;
+    default:
+      statusIcon.textContent = '⚪';
+      statusText.textContent = 'Unknown';
+  }
+}
+
+// Set up network manager callbacks
+networkManager.onStatusChange(updateConnectionStatus);
+networkManager.onError((error, context) => {
+  console.error(`Network error in ${context}:`, error);
+  // Additional error handling can be added here
+});
 
 // Focus management for organizer interface
 function manageOrganizerFocus(elementId) {
@@ -502,12 +546,26 @@ if (socket) {
   });
 
   socket.on('error', (data) => {
-    console.error('Error:', data.message);
-    alert('⚠️ Error: ' + data.message);
+    const message = data?.message || 'An error occurred';
+    console.error('Socket error:', message);
+    networkManager.showNotification(`⚠️ ${message}`, 'error');
+    networkManager.notifyError(new Error(message), 'socket_error');
   });
 
-  socket.on('disconnect', () => {
-    console.log('Disconnected from server');
+  socket.on('disconnect', (reason) => {
+    console.log('Socket disconnected:', reason);
+
+    let message = 'Disconnected from server';
+    if (reason === 'io server disconnect') {
+      message = 'Server disconnected. Please refresh the page.';
+    } else if (reason === 'io client disconnect') {
+      message = 'You disconnected from the server.';
+    } else if (!navigator.onLine) {
+      message = 'Disconnected due to network issues. Reconnecting when online...';
+    }
+
+    networkManager.showNotification(message, 'warning');
+    networkManager.handleWebSocketError(new Error(reason), socket);
   });
 }
 

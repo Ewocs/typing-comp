@@ -1,5 +1,8 @@
 const socket = io();
 
+// Initialize network manager for offline detection and error handling
+const networkManager = new NetworkManager();
+
 // Import text manager for multi-language support
 // Note: In browser environment, we'll load this via script tag or inline
 
@@ -87,6 +90,47 @@ const timerDisplay = document.getElementById('timerDisplay');
 const focusWarning = document.getElementById('focusWarning');
 const joinNewCompetitionBtn = document.getElementById('joinNewCompetitionBtn');
 
+// Connection status elements
+const connectionStatus = document.getElementById('connectionStatus');
+const statusIcon = document.getElementById('statusIcon');
+const statusText = document.getElementById('statusText');
+
+// ================= CONNECTION STATUS MANAGEMENT =================
+function updateConnectionStatus(status, isOnline) {
+  if (!connectionStatus) return;
+
+  connectionStatus.className = `connection-status ${status}`;
+
+  switch (status) {
+    case 'connected':
+      statusIcon.textContent = '🟢';
+      statusText.textContent = 'Connected';
+      break;
+    case 'connecting':
+      statusIcon.textContent = '🔄';
+      statusText.textContent = 'Connecting...';
+      break;
+    case 'disconnected':
+      statusIcon.textContent = '🔴';
+      statusText.textContent = isOnline ? 'Disconnected' : 'Offline';
+      break;
+    case 'reconnecting':
+      statusIcon.textContent = '🟡';
+      statusText.textContent = 'Reconnecting...';
+      break;
+    default:
+      statusIcon.textContent = '⚪';
+      statusText.textContent = 'Unknown';
+  }
+}
+
+// Set up network manager callbacks
+networkManager.onStatusChange(updateConnectionStatus);
+networkManager.onError((error, context) => {
+  console.error(`Network error in ${context}:`, error);
+  // Additional error handling can be added here
+});
+
 // ====== Monkeytype-style focus ======
 if (textDisplay && typingInput) {
   textDisplay.addEventListener('click', () => typingInput.focus());
@@ -110,7 +154,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ============= JOIN COMPETITION =============
-joinBtn.addEventListener('click', () => {
+joinBtn.addEventListener('click', async () => {
   const code = competitionCodeInput.value.toUpperCase().trim();
   const name = participantNameInput.value.trim();
 
@@ -124,10 +168,63 @@ joinBtn.addEventListener('click', () => {
     return;
   }
 
+  if (!networkManager.isOnline) {
+    showError('You are offline. Please check your internet connection and try again.');
+    return;
+  }
+
   joinError.classList.remove('show');
   participantName = name;
 
-  socket.emit('join', { code, participantName: name });
+  // Disable button during join attempt
+  joinBtn.disabled = true;
+  joinBtn.textContent = 'Joining...';
+
+  try {
+    const joinSuccess = await networkManager.retryOperation(
+      () => new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Join request timed out'));
+        }, 10000);
+
+        socket.emit('join', { code, participantName: name });
+
+        // Listen for join response
+        const handleJoinSuccess = (data) => {
+          clearTimeout(timeout);
+          socket.off('joinSuccess', handleJoinSuccess);
+          socket.off('error', handleJoinError);
+          resolve(data);
+        };
+
+        const handleJoinError = (error) => {
+          clearTimeout(timeout);
+          socket.off('joinSuccess', handleJoinSuccess);
+          socket.off('error', handleJoinError);
+          reject(new Error(error.message || 'Failed to join competition'));
+        };
+
+        socket.once('joinSuccess', handleJoinSuccess);
+        socket.once('error', handleJoinError);
+      }),
+      'join competition'
+    );
+
+    if (joinSuccess) {
+      // Join successful - UI will be updated by socket events
+    }
+  } catch (error) {
+    const isNetworkError = error.message.includes('timeout') || error.message.includes('network') || !navigator.onLine;
+    const retryCallback = isNetworkError ? () => {
+      // Re-trigger the join button click
+      joinBtn.click();
+    } : null;
+
+    showErrorWithRetry(error.message, retryCallback, isNetworkError);
+  } finally {
+    joinBtn.disabled = false;
+    joinBtn.textContent = 'Join Competition';
+  }
 });
 
 // ============= KEYBOARD SHORTCUTS =============
@@ -449,9 +546,8 @@ function createMuteToggle() {
   document.body.appendChild(muteBtn);
 }
 
-// Error display
-// Error display
-function showError(message) {
+// Enhanced error display with retry functionality
+function showErrorWithRetry(message, retryCallback = null, isNetworkError = false) {
   if (typeof document === 'undefined') return;
 
   // Remove existing popup if any
@@ -485,10 +581,10 @@ function showError(message) {
     animation: popupScale 0.25s ease;
   `;
 
-  popup.innerHTML = `
-    <div style="font-size: 52px; margin-bottom: 12px;">😢</div>
-    <h2 style="color:#ff4d4f; margin-bottom: 8px;">Oops!</h2>
-    <p style="font-size: 15px; line-height: 1.5;">${message}</p>
+  const icon = isNetworkError ? '📶' : '😢';
+  const title = isNetworkError ? 'Connection Issue' : 'Oops!';
+
+  let buttonsHtml = `
     <button id="errorPopupCloseBtn"
       style="
         margin-top: 20px;
@@ -504,6 +600,44 @@ function showError(message) {
     </button>
   `;
 
+  if (retryCallback && isNetworkError) {
+    buttonsHtml = `
+      <div style="display: flex; gap: 12px; justify-content: center; margin-top: 20px;">
+        <button id="errorPopupRetryBtn"
+          style="
+            background:#1890ff;
+            border:none;
+            color:white;
+            padding:10px 18px;
+            border-radius:8px;
+            font-size:14px;
+            cursor:pointer;
+          ">
+          🔄 Retry
+        </button>
+        <button id="errorPopupCloseBtn"
+          style="
+            background:#ff4d4f;
+            border:none;
+            color:white;
+            padding:10px 18px;
+            border-radius:8px;
+            font-size:14px;
+            cursor:pointer;
+          ">
+          Close
+        </button>
+      </div>
+    `;
+  }
+
+  popup.innerHTML = `
+    <div style="font-size: 52px; margin-bottom: 12px;">${icon}</div>
+    <h2 style="color:#ff4d4f; margin-bottom: 8px;">${title}</h2>
+    <p style="font-size: 15px; line-height: 1.5;">${message}</p>
+    ${buttonsHtml}
+  `;
+
   overlay.appendChild(popup);
   document.body.appendChild(overlay);
 
@@ -515,8 +649,22 @@ function showError(message) {
     if (e.target === overlay) close();
   };
 
-  // Auto-close after 5 seconds
-  setTimeout(close, 5000);
+  // Retry handler
+  if (retryCallback && isNetworkError) {
+    document.getElementById('errorPopupRetryBtn').onclick = () => {
+      overlay.remove();
+      retryCallback();
+    };
+  }
+
+  // Auto-close after 8 seconds for network errors (longer timeout)
+  const timeout = isNetworkError ? 8000 : 5000;
+  setTimeout(close, timeout);
+}
+
+// Legacy showError function (backwards compatibility)
+function showError(message) {
+  showErrorWithRetry(message, null, false);
 }
 
 
@@ -551,12 +699,11 @@ socket.on('leaderboardUpdate', (data) => {
 socket.on('participantJoined', (data) => {
   participantCountDisplay.textContent = data.totalParticipants;
 });
-socket.on('error', (data) => {
-  showError(data?.message || 'Invalid participation code. Please try again.');
-});
 
 socket.on('error', (data) => {
-  showError(data?.message || 'Invalid participation code. Please try again.');
+  const message = data?.message || 'An error occurred. Please try again.';
+  showError(message);
+  networkManager.notifyError(new Error(message), 'socket_error');
 });
 
 socket.on('roundStarted', (data) => {
@@ -676,8 +823,36 @@ socket.on('finalResults', () => {
   manageScreenFocus('completionScreen');
 });
 
-socket.on('disconnect', () => {
-  showError('Disconnected from server');
+socket.on('disconnect', (reason) => {
+  console.log('Socket disconnected:', reason);
+
+  let message = 'Disconnected from server';
+  let isNetworkError = false;
+
+  if (reason === 'io server disconnect') {
+    message = 'Server disconnected. Please refresh the page to reconnect.';
+    isNetworkError = true;
+  } else if (reason === 'io client disconnect') {
+    message = 'You disconnected from the server.';
+  } else if (!navigator.onLine) {
+    message = 'Disconnected due to network issues. Please check your internet connection.';
+    isNetworkError = true;
+  } else {
+    message = 'Connection lost. Attempting to reconnect...';
+    isNetworkError = true;
+  }
+
+  const retryCallback = isNetworkError ? () => {
+    if (navigator.onLine) {
+      networkManager.showNotification('🔄 Attempting to reconnect...', 'info');
+      // Socket.IO handles reconnection automatically
+    } else {
+      showErrorWithRetry('You are still offline. Please check your internet connection.', null, true);
+    }
+  } : null;
+
+  showErrorWithRetry(message, retryCallback, isNetworkError);
+  networkManager.handleWebSocketError(new Error(reason), socket);
 });
 
 // Buttons
