@@ -156,61 +156,57 @@ function createTrendsChart(performanceData) {
     data: {
       labels: performanceData.map((d) => formatDate(d.date)),
       datasets: [
-  {
-    label: 'Avg WPM',
-    data: performanceData.map(d => d.avgWPM),
-    borderColor: 'rgba(52, 152, 219, 1)',
-    tension: 0.4,
-    fill: true,
-    backgroundColor: (ctx) => {
-      const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-      gradient.addColorStop(0, 'rgba(52, 152, 219, 0.4)');
-      gradient.addColorStop(1, 'rgba(52, 152, 219, 0)');
-      return gradient;
+        {
+          label: 'Avg WPM',
+          data: performanceData.map((d) => d.avgWPM),
+          borderColor: 'rgba(52, 152, 219, 1)',
+          tension: 0.4,
+          fill: true,
+          backgroundColor: (ctx) => {
+            const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(52, 152, 219, 0.4)');
+            gradient.addColorStop(1, 'rgba(52, 152, 219, 0)');
+            return gradient;
+          },
+        },
+        {
+          label: 'Avg Accuracy (%)',
+          data: performanceData.map((d) => d.avgAccuracy),
+          borderColor: 'rgba(46, 204, 113, 1)',
+          tension: 0.4,
+          fill: true,
+          backgroundColor: (ctx) => {
+            const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(46, 204, 113, 0.4)');
+            gradient.addColorStop(1, 'rgba(46, 204, 113, 0)');
+            return gradient;
+          },
+        },
+      ],
     },
-  },
-  {
-    label: 'Avg Accuracy (%)',
-    data: performanceData.map(d => d.avgAccuracy),
-    borderColor: 'rgba(46, 204, 113, 1)',
-    tension: 0.4,
-    fill: true,
-    backgroundColor: (ctx) => {
-      const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
-      gradient.addColorStop(0, 'rgba(46, 204, 113, 0.4)');
-      gradient.addColorStop(1, 'rgba(46, 204, 113, 0)');
-      return gradient;
-    },
-  },
-],
-
-    },
-  options: {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { position: 'top' },
-    tooltip: {
-      callbacks: {
-        label: (context) => {
-          if (context.dataset.label.includes('Accuracy')) {
-            return `${context.raw}% Accuracy`;
-          }
-          return `${context.raw} WPM`;
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              if (context.dataset.label.includes('Accuracy')) {
+                return `${context.raw}% Accuracy`;
+              }
+              return `${context.raw} WPM`;
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
         },
       },
     },
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      max: 100,
-    },
-  },
-},
-
-   
-
   });
 }
 
@@ -310,23 +306,22 @@ function createPerformanceChart(data) {
           display: false,
         },
       },
-     scales: {
-  yWPM: {
-    type: 'linear',
-    position: 'left',
-    beginAtZero: true,
-    title: { display: true, text: 'WPM' },
-  },
-  yAccuracy: {
-    type: 'linear',
-    position: 'right',
-    beginAtZero: true,
-    max: 100,
-    title: { display: true, text: 'Accuracy (%)' },
-    grid: { drawOnChartArea: false },
-  },
-},
-
+      scales: {
+        yWPM: {
+          type: 'linear',
+          position: 'left',
+          beginAtZero: true,
+          title: { display: true, text: 'WPM' },
+        },
+        yAccuracy: {
+          type: 'linear',
+          position: 'right',
+          beginAtZero: true,
+          max: 100,
+          title: { display: true, text: 'Accuracy (%)' },
+          grid: { drawOnChartArea: false },
+        },
+      },
     },
   });
 }
@@ -409,7 +404,7 @@ async function loadAnalytics() {
 
     // Update top performers table
     updateTopPerformersTable(participants.data.topPerformers);
-createAccuracyVsWpmChart(participants.data.topPerformers);
+    createAccuracyVsWpmChart(participants.data.topPerformers);
 
     // Show content
     document.getElementById('loading').style.display = 'none';
@@ -417,7 +412,7 @@ createAccuracyVsWpmChart(participants.data.topPerformers);
   } catch (error) {
     console.error('Error loading analytics:', error);
     showError(
-      'Failed to load analytics data. Please try again or check your connection.',
+      'Failed to load analytics data. Please try again or check your connection.'
     );
   }
 }
@@ -436,7 +431,7 @@ function createAccuracyVsWpmChart(data) {
       datasets: [
         {
           label: 'Participants',
-          data: data.map(p => ({
+          data: data.map((p) => ({
             x: p.avgWPM,
             y: p.avgAccuracy,
           })),
@@ -459,7 +454,6 @@ function createAccuracyVsWpmChart(data) {
     },
   });
 }
-
 
 // Period selector change handler
 document.getElementById('periodSelector').addEventListener('change', () => {

@@ -1,3 +1,8 @@
+// ============================================
+// TYPING COMPETITION ORGANIZER SCRIPT
+// Handles organizer-side logic for managing typing competitions
+// ============================================
+
 let socket = null;
 try {
   socket = io();
@@ -5,10 +10,18 @@ try {
   console.warn('Socket.io connection failed:', error);
 }
 
+// ============================================
+// GLOBAL STATE VARIABLES
+// ============================================
+
 let competitionId = null;
 let rounds = [];
 let competitionCode = null;
 let completedRounds = new Set();
+
+// ============================================
+// AUTHENTICATION CHECK
+// ============================================
 
 // Check authentication
 const authToken = localStorage.getItem('authToken');
@@ -16,15 +29,21 @@ if (!authToken) {
   window.location.href = '/login';
 }
 
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
 // Helper function to get auth headers
 function getAuthHeaders() {
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`
+    Authorization: `Bearer ${authToken}`,
   };
 }
 
-// DOM Elements
+// ============================================
+// DOM ELEMENT REFERENCES
+// ============================================
 const compNameInput = document.getElementById('compName');
 const compDescriptionInput = document.getElementById('compDescription');
 const addRoundBtn = document.getElementById('addRoundBtn');
@@ -37,7 +56,9 @@ const roundButtonsList = document.getElementById('roundButtonsList');
 const startRoundBtn = document.getElementById('startRoundBtn');
 const leaderboardContainer = document.getElementById('leaderboardContainer');
 const roundStatus = document.getElementById('roundStatus');
-const participantCountDisplay = document.getElementById('participantCountDisplay');
+const participantCountDisplay = document.getElementById(
+  'participantCountDisplay'
+);
 const compInfo = document.getElementById('compInfo');
 const compNameDisplay = document.getElementById('compNameDisplay');
 const statusDisplay = document.getElementById('statusDisplay');
@@ -47,6 +68,10 @@ const exportPdfBtn = document.getElementById('exportPdfBtn');
 
 let selectedRound = null;
 
+// ============================================
+// UI MANAGEMENT FUNCTIONS
+// ============================================
+
 // Focus management for organizer interface
 function manageOrganizerFocus(elementId) {
   const element = document.getElementById(elementId);
@@ -55,11 +80,18 @@ function manageOrganizerFocus(elementId) {
   }
 }
 
+// ============================================
+// INITIALIZATION
+// ============================================
+
 // Auto-focus first input when page loads
 document.addEventListener('DOMContentLoaded', () => {
   // Focus first competition input if setup form is visible
   const compNameInput = document.getElementById('compName');
-  if (compNameInput && !document.getElementById('setupForm').classList.contains('hidden')) {
+  if (
+    compNameInput &&
+    !document.getElementById('setupForm').classList.contains('hidden')
+  ) {
     compNameInput.focus();
   }
 
@@ -87,7 +119,7 @@ addRoundBtn.addEventListener('click', () => {
 // Render rounds UI
 function renderRounds() {
   roundsList.innerHTML = '';
-  
+
   rounds.forEach((round, index) => {
     const roundDiv = document.createElement('div');
     roundDiv.className = 'round-item';
@@ -155,16 +187,16 @@ function removeRound(index) {
 createCompBtn.addEventListener('click', async () => {
   const compName = compNameInput.value.trim();
   const compDescription = compDescriptionInput.value.trim();
- const maxPlayersInput = document.getElementById("maxPlayers");
-const maxPlayers = maxPlayersInput && maxPlayersInput.value
-  ? parseInt(maxPlayersInput.value, 10)
-  : null;
+  const maxPlayersInput = document.getElementById('maxPlayers');
+  const maxPlayers =
+    maxPlayersInput && maxPlayersInput.value
+      ? parseInt(maxPlayersInput.value, 10)
+      : null;
 
   if (maxPlayers !== null && (isNaN(maxPlayers) || maxPlayers < 1)) {
-  alert("Maximum players must be a number greater than 0");
-  return;
-}
-
+    alert('Maximum players must be a number greater than 0');
+    return;
+  }
 
   if (compName.length < 3) {
     alert('Please enter competition name with at least 3 characters');
@@ -180,11 +212,17 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
   rounds = rounds.map((round, index) => ({
     text: document.getElementById(`text-${index}`).value.trim(),
     language: document.getElementById(`language-${index}`).value,
-    duration: parseInt(document.getElementById(`duration-${index}`).value)
+    duration: parseInt(document.getElementById(`duration-${index}`).value),
   }));
 
-  if (rounds.some(r => r.text.length < 10 || !(30 <= r.duration && r.duration <= 600))) {
-    alert('All rounds must have text minimum of 10 characters and duration between 30 and 600 seconds');
+  if (
+    rounds.some(
+      (r) => r.text.length < 10 || !(30 <= r.duration && r.duration <= 600)
+    )
+  ) {
+    alert(
+      'All rounds must have text minimum of 10 characters and duration between 30 and 600 seconds'
+    );
     return;
   }
 
@@ -192,13 +230,12 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
     const response = await fetch('/api/create', {
       method: 'POST',
       headers: getAuthHeaders(),
-    body: JSON.stringify({
-  name: compName,
-  description: compDescription,
-  rounds,
-  maxPlayers // 👈 ADD THIS
-})
-
+      body: JSON.stringify({
+        name: compName,
+        description: compDescription,
+        rounds,
+        maxPlayers, // 👈 ADD THIS
+      }),
     });
 
     const data = await response.json();
@@ -233,7 +270,7 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
       if (socket) {
         socket.emit('organizerJoin', {
           competitionId,
-          code: data.code
+          code: data.code,
         });
       }
     } else {
@@ -245,12 +282,17 @@ const maxPlayers = maxPlayersInput && maxPlayersInput.value
   }
 });
 
-// ============= KEYBOARD SHORTCUTS =============
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
 document.addEventListener('keydown', (e) => {
   switch (e.key) {
     case 'Enter':
       // Submit form or create competition
-      if (document.getElementById('setupForm') && !document.getElementById('setupForm').classList.contains('hidden')) {
+      if (
+        document.getElementById('setupForm') &&
+        !document.getElementById('setupForm').classList.contains('hidden')
+      ) {
         e.preventDefault();
         createCompBtn.click();
       }
@@ -258,7 +300,7 @@ document.addEventListener('keydown', (e) => {
     case 'Tab':
       // Switch to participant role
       e.preventDefault();
-      window.location.href = "/participant.html";
+      window.location.href = '/participant.html';
       break;
     case 'Escape':
       // Close modals or go back
@@ -269,14 +311,19 @@ document.addEventListener('keydown', (e) => {
     case 'ArrowDown':
       // Navigate rounds or options
       e.preventDefault();
-      const roundButtons = document.querySelectorAll('.round-btn:not(.completed)');
+      const roundButtons = document.querySelectorAll(
+        '.round-btn:not(.completed)'
+      );
       if (roundButtons.length > 0) {
-        const currentIndex = Array.from(roundButtons).findIndex(btn => btn.classList.contains('active'));
+        const currentIndex = Array.from(roundButtons).findIndex((btn) =>
+          btn.classList.contains('active')
+        );
         let nextIndex;
         if (e.key === 'ArrowDown') {
           nextIndex = (currentIndex + 1) % roundButtons.length;
         } else {
-          nextIndex = currentIndex === 0 ? roundButtons.length - 1 : currentIndex - 1;
+          nextIndex =
+            currentIndex === 0 ? roundButtons.length - 1 : currentIndex - 1;
         }
         roundButtons[nextIndex].click();
       }
@@ -302,29 +349,31 @@ function renderRoundButtons() {
     btn.disabled = isCompleted;
     btn.style.opacity = isCompleted ? '0.5' : '1';
     btn.style.cursor = isCompleted ? 'not-allowed' : 'pointer';
-    
+
     btn.addEventListener('click', () => {
       selectedRound = index;
-      
+
       // Remove previous selection
-      document.querySelectorAll('.round-btn').forEach(b => b.classList.remove('active'));
+      document
+        .querySelectorAll('.round-btn')
+        .forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      
+
       // Update round details
-      document.getElementById('selectedRoundText').textContent = 
+      document.getElementById('selectedRoundText').textContent =
         `📄 ${round.text.substring(0, 100)}...`;
-      document.getElementById('selectedRoundTime').textContent = 
+      document.getElementById('selectedRoundTime').textContent =
         `⏱️ Duration: ${round.duration} seconds`;
-      
+
       startRoundBtn.disabled = isCompleted;
     });
 
     if (index === 0) {
       btn.classList.add('active');
       selectedRound = 0;
-      document.getElementById('selectedRoundText').textContent = 
+      document.getElementById('selectedRoundText').textContent =
         `📄 ${round.text.substring(0, 100)}...`;
-      document.getElementById('selectedRoundTime').textContent = 
+      document.getElementById('selectedRoundTime').textContent =
         `⏱️ Duration: ${round.duration} seconds`;
       startRoundBtn.disabled = false;
     }
@@ -347,7 +396,7 @@ startRoundBtn.addEventListener('click', () => {
 
   socket.emit('startRound', {
     competitionId,
-    roundIndex: selectedRound
+    roundIndex: selectedRound,
   });
 
   startRoundBtn.disabled = true;
@@ -365,17 +414,18 @@ function showRoundStatus(roundIndex) {
   const timerInterval = setInterval(() => {
     timeLeft--;
     document.getElementById('roundTimer').textContent = timeLeft;
-    
+
     const progress = ((duration - timeLeft) / duration) * 100;
-    document.getElementById('progressFill').style.transform = `scaleX(${progress / 100})`;
+    document.getElementById('progressFill').style.transform =
+      `scaleX(${progress / 100})`;
 
     if (timeLeft <= 0) {
       clearInterval(timerInterval);
       roundStatus.classList.add('hidden');
-      
+
       // Mark round as completed
       completedRounds.add(roundIndex);
-      
+
       // Disable the round button
       const roundButtons = document.querySelectorAll('.round-btn');
       if (roundButtons[roundIndex]) {
@@ -384,7 +434,7 @@ function showRoundStatus(roundIndex) {
         roundButtons[roundIndex].style.opacity = '0.5';
         roundButtons[roundIndex].style.cursor = 'not-allowed';
       }
-      
+
       // Disable start button if this round was selected
       if (selectedRound === roundIndex) {
         startRoundBtn.disabled = true;
@@ -395,38 +445,37 @@ function showRoundStatus(roundIndex) {
 
 // Copy code to clipboard
 function copyCode() {
-  const codeEl = document.getElementById("codeValue");
+  const codeEl = document.getElementById('codeValue');
   if (!codeEl) return;
 
-  const text = codeEl.textContent || codeEl.innerText || "";
+  const text = codeEl.textContent || codeEl.innerText || '';
   if (!text) return;
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).catch(err => {
-      console.error("Clipboard copy failed:", err);
+    navigator.clipboard.writeText(text).catch((err) => {
+      console.error('Clipboard copy failed:', err);
     });
   } else {
     // Fallback for older browsers
-    const temp = document.createElement("textarea");
+    const temp = document.createElement('textarea');
     temp.value = text;
     document.body.appendChild(temp);
     temp.select();
     try {
-      document.execCommand("copy");
+      document.execCommand('copy');
     } catch (e) {
-      console.error("execCommand copy failed:", e);
+      console.error('execCommand copy failed:', e);
     }
     document.body.removeChild(temp);
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const copyBtn = document.getElementById("copyBtn");
+document.addEventListener('DOMContentLoaded', () => {
+  const copyBtn = document.getElementById('copyBtn');
   if (copyBtn) {
-    copyBtn.addEventListener("click", copyCode);
+    copyBtn.addEventListener('click', copyCode);
   }
 });
-
 
 // Socket events
 if (socket) {
@@ -439,7 +488,9 @@ if (socket) {
     const leaderboard = data.leaderboard;
     leaderboardContainer.innerHTML = `
       <h4>🏁 Live Round ${data.roundIndex + 1}</h4>
-      ${leaderboard.map((item, index) => `
+      ${leaderboard
+        .map(
+          (item, index) => `
         <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
           <span class="leaderboard-rank">#${index + 1}</span>
           <span class="leaderboard-name">${item.name}</span>
@@ -450,14 +501,18 @@ if (socket) {
             <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
           </span>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     `;
   });
 
   socket.on('roundEnded', (data) => {
     leaderboardContainer.innerHTML = `
       <h4>✅ Round ${data.roundIndex + 1} - Final Results</h4>
-      ${data.leaderboard.map((item, index) => `
+      ${data.leaderboard
+        .map(
+          (item, index) => `
         <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
           <span class="leaderboard-rank">#${index + 1}</span>
           <span class="leaderboard-name">${item.name}</span>
@@ -468,7 +523,9 @@ if (socket) {
             <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
           </span>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     `;
   });
 
@@ -476,16 +533,17 @@ if (socket) {
     console.log('Final Results:', data.rankings);
     statusDisplay.textContent = 'Completed';
     statusDisplay.className = 'status-badge completed';
-    
+
     // Show export section
     exportSection.classList.remove('hidden');
-    
+
     leaderboardContainer.innerHTML = `
       <h4>🏆 Final Rankings 🏆</h4>
-      ${data.rankings.map((item, index) => {
-        const medals = ['🥇', '🥈', '🥉'];
-        const medal = medals[index] || `#${index + 1}`;
-        return `
+      ${data.rankings
+        .map((item, index) => {
+          const medals = ['🥇', '🥈', '🥉'];
+          const medal = medals[index] || `#${index + 1}`;
+          return `
           <div class="leaderboard-item final-rank">
             <span class="medal">${medal}</span>
             <span class="leaderboard-name">${item.name}</span>
@@ -497,7 +555,8 @@ if (socket) {
             </span>
           </div>
         `;
-      }).join('')}
+        })
+        .join('')}
     `;
   });
 
@@ -529,7 +588,7 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 async function fetchRankings() {
   try {
     const response = await fetch(`/api/competition/${competitionId}/rankings`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
     const data = await response.json();
     if (data.success) {
@@ -552,10 +611,18 @@ exportExcelBtn.addEventListener('click', async () => {
       [data.name],
       ['Generated on', new Date().toLocaleString()],
       [],
-      ['Rank', 'Participant Name', 'Average WPM', 'Average Accuracy (%)', 'Total Rounds Completed', 'Highest WPM', 'Lowest WPM']
+      [
+        'Rank',
+        'Participant Name',
+        'Average WPM',
+        'Average Accuracy (%)',
+        'Total Rounds Completed',
+        'Highest WPM',
+        'Lowest WPM',
+      ],
     ];
 
-    data.rankings.forEach(item => {
+    data.rankings.forEach((item) => {
       sheetData.push([
         item.rank,
         item.participantName,
@@ -563,14 +630,17 @@ exportExcelBtn.addEventListener('click', async () => {
         item.averageAccuracy,
         item.totalRoundsCompleted,
         item.highestWpm,
-        item.lowestWpm
+        item.lowestWpm,
       ]);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Rankings');
-    XLSX.writeFile(wb, `${data.code}_rankings_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `${data.code}_rankings_${new Date().toISOString().split('T')[0]}.xlsx`
+    );
   } catch (error) {
     alert('Error generating Excel: ' + error.message);
   }
@@ -627,7 +697,7 @@ exportPdfBtn.addEventListener('click', async () => {
       filename: `${data.code}_rankings.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' },
     };
 
     html2pdf().set(options).from(element).save();
