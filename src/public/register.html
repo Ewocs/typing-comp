@@ -114,12 +114,12 @@
       <form id="registerForm">
         <div class="form-group">
           <label for="name">Full Name</label>
-          <input type="text" id="name" required autocomplete="name">
+          <input type="text" id="name" required autocomplete="name" title="Enter your full name as it will appear to participants">
         </div>
         
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" required autocomplete="email">
+          <input type="email" id="email" required autocomplete="email" title="Provide a valid email address for account verification and login">
         </div>
         
         <div class="form-group">
@@ -132,15 +132,16 @@
       required
       autocomplete="new-password"
       minlength="12"
+      title="Create a strong password with at least 12 characters including uppercase, lowercase, numbers, and special characters"
     />
-    <span class="eye-icon" id="togglePassword">👁️</span>
+    <span class="eye-icon" id="togglePassword" title="Toggle password visibility">👁️</span>
   </div>
 
   <div class="password-hint">Minimum 12 characters with uppercase, lowercase, number, and special character (@$!%*?&)</div>
 </div>
 
         
-        <button type="submit" class="btn-primary" id="registerBtn">
+        <button type="submit" class="btn-primary" id="registerBtn" title="Create your organizer account to start managing competitions">
           Create Account
         </button>
       </form>
