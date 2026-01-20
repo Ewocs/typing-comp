@@ -530,8 +530,22 @@ socket.on('joinSuccess', (data) => {
   lobbyScreen.classList.remove('hidden');
 });
 
-socket.on('joinError', (data) => {
-  showError(data?.message || 'Unable to join competition');
+socket.on('leaderboardUpdate', (data) => {
+  const leaderboardList = document.getElementById('leaderboardList');
+  if (!leaderboardList) return;
+
+  leaderboardList.innerHTML = data.leaderboard.map((item, index) => `
+    <div class="leaderboard-item ${index < 3 ? `top-${index + 1}` : ''}">
+      <span class="leaderboard-rank">#${index + 1}</span>
+      <span class="leaderboard-name">${item.name}</span>
+      <span class="leaderboard-stats">
+        <span>🏃 ${item.wpm} WPM</span>
+        <span>🎯 ${item.accuracy}%</span>
+        <span class="text-red">❌ ${item.errors ?? 0}</span>
+        <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
+      </span>
+    </div>
+  `).join('');
 });
 
 socket.on('participantJoined', (data) => {
