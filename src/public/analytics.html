@@ -314,6 +314,34 @@
             <div class="stat-value" id="maxWPM">0</div>
             <div class="stat-subvalue">max WPM recorded</div>
           </div>
+
+          <div class="stat-card">
+            <div class="stat-label">Completion Rate</div>
+            <div class="stat-value" id="completionRate">0%</div>
+            <div class="stat-subvalue">rounds completed</div>
+          </div>
+
+          <div class="stat-card green">
+            <div class="stat-label">Activity Score</div>
+            <div class="stat-value" id="activityScore">0</div>
+            <div class="stat-subvalue">engagement level</div>
+          </div>
+        </div>
+
+        <!-- Export Controls -->
+        <div class="chart-card">
+          <h2>📊 Export Analytics Data</h2>
+          <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <button onclick="exportData('competitions')" class="btn btn--primary">
+              📈 Export Competitions
+            </button>
+            <button onclick="exportData('participants')" class="btn btn--secondary">
+              👥 Export Participants
+            </button>
+            <button onclick="exportData('overview')" class="btn btn--outline">
+              📋 Export Overview
+            </button>
+          </div>
         </div>
 
         <!-- Charts -->
@@ -352,6 +380,30 @@
             <h2>Competition Performance</h2>
             <div class="chart-container">
               <canvas id="performanceChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Accuracy Distribution -->
+          <div class="chart-card">
+            <h2>Accuracy Distribution</h2>
+            <div class="chart-container">
+              <canvas id="accuracyChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Performance Heatmap -->
+          <div class="chart-card">
+            <h2>Performance Heatmap</h2>
+            <div class="chart-container tall">
+              <canvas id="heatmapChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Engagement Metrics -->
+          <div class="chart-card">
+            <h2>Engagement Overview</h2>
+            <div class="chart-container">
+              <canvas id="engagementChart"></canvas>
             </div>
           </div>
         </div>

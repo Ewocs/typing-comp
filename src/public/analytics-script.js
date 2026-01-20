@@ -68,6 +68,14 @@ function updateOverviewStats(data) {
     data.participants.average;
   document.getElementById('avgWPM').textContent = data.performance.avgWPM;
   document.getElementById('maxWPM').textContent = data.performance.maxWPM;
+
+  // Update engagement metrics if available
+  if (data.engagement) {
+    document.getElementById('completionRate').textContent =
+      `${data.engagement.completionRate || 0}%`;
+    document.getElementById('activityScore').textContent =
+      data.engagement.activityScore || 0;
+  }
 }
 
 // Create Competitions Activity Chart
@@ -387,11 +395,14 @@ async function loadAnalytics() {
     const period = document.getElementById('periodSelector').value;
 
     // Fetch all data in parallel
-    const [overview, competitions, participants, trends] = await Promise.all([
+    const [overview, competitions, participants, trends, accuracy, engagement, heatmap] = await Promise.all([
       fetchAnalytics('overview'),
       fetchAnalytics('competitions'),
       fetchAnalytics('participants'),
       fetchAnalytics(`trends?period=${period}`),
+      fetchAnalytics('accuracy-distribution'),
+      fetchAnalytics('engagement-metrics'),
+      fetchAnalytics('performance-heatmap'),
     ]);
 
     if (!overview || !competitions || !participants || !trends) {
@@ -406,10 +417,13 @@ async function loadAnalytics() {
     createPerformanceChart(competitions.data);
     createParticipantsChart(participants.data.distribution);
     createTrendsChart(trends.data.performance);
+    createAccuracyVsWpmChart(participants.data.topPerformers);
+    createAccuracyChart(accuracy?.data || []);
+    createEngagementChart(engagement?.data || null);
+    createHeatmapChart(heatmap?.data || null);
 
     // Update top performers table
     updateTopPerformersTable(participants.data.topPerformers);
-createAccuracyVsWpmChart(participants.data.topPerformers);
 
     // Show content
     document.getElementById('loading').style.display = 'none';
@@ -460,10 +474,269 @@ function createAccuracyVsWpmChart(data) {
   });
 }
 
+// Create Accuracy Distribution Chart
+function createAccuracyChart(data) {
+  const ctx = document.getElementById('accuracyChart');
+  if (!ctx) return;
+
+  if (charts.accuracy) {
+    charts.accuracy.destroy();
+  }
+
+  if (!data || data.length === 0) {
+    ctx.parentElement.innerHTML =
+      '<div class="empty-state"><h3>No accuracy data</h3><p>Complete rounds to see accuracy distribution</p></div>';
+    return;
+  }
+
+  charts.accuracy = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.range),
+      datasets: [
+        {
+          label: 'Participants',
+          data: data.map(d => d.count),
+          backgroundColor: 'rgba(46, 204, 113, 0.7)',
+          borderColor: 'rgba(46, 204, 113, 1)',
+          borderWidth: 2,
+        },
+        {
+          label: 'Avg WPM',
+          data: data.map(d => d.avgWPM),
+          backgroundColor: 'rgba(52, 152, 219, 0.7)',
+          borderColor: 'rgba(52, 152, 219, 1)',
+          borderWidth: 2,
+          yAxisID: 'yWPM',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        tooltip: {
+          callbacks: {
+            afterLabel: function (context) {
+              if (context.datasetIndex === 1) {
+                return `Avg WPM in this range`;
+              }
+              return `${context.raw} participants`;
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          type: 'linear',
+          position: 'left',
+          title: { display: true, text: 'Participants' },
+        },
+        yWPM: {
+          type: 'linear',
+          position: 'right',
+          title: { display: true, text: 'Avg WPM' },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+// Create Performance Heatmap Chart
+function createHeatmapChart(data) {
+  const ctx = document.getElementById('heatmapChart');
+  if (!ctx) return;
+
+  if (charts.heatmap) {
+    charts.heatmap.destroy();
+  }
+
+  if (!data || !data.activity) {
+    ctx.parentElement.innerHTML =
+      '<div class="empty-state"><h3>No heatmap data</h3><p>More competition data needed for heatmap</p></div>';
+    return;
+  }
+
+  // Prepare data for heatmap
+  const activityData = [];
+
+  data.activity.forEach((dayData, dayIndex) => {
+    dayData.forEach((activity, hourIndex) => {
+      if (activity > 0) {
+        activityData.push({
+          x: hourIndex,
+          y: dayIndex,
+          v: activity,
+        });
+      }
+    });
+  });
+
+  charts.heatmap = new Chart(ctx, {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        label: 'Activity Heatmap',
+        data: activityData,
+        backgroundColor: (ctx) => {
+          const value = ctx.raw.v;
+          const alpha = Math.min(value / 10, 1);
+          return `rgba(52, 152, 219, ${alpha})`;
+        },
+        borderColor: 'rgba(255, 255, 255, 0.5)',
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (ctx) => {
+              const item = ctx[0].raw;
+              return `${data.days[item.y]} ${data.hours[item.x]}`;
+            },
+            label: (ctx) => {
+              const item = ctx.raw;
+              const wpm = data.performance[item.y][item.x] || 0;
+              return `Activity: ${item.v}, Avg WPM: ${wpm}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          position: 'bottom',
+          ticks: {
+            stepSize: 1,
+            callback: (value) => data.hours[value] || value,
+          },
+          title: { display: true, text: 'Hour of Day' },
+        },
+        y: {
+          type: 'linear',
+          ticks: {
+            stepSize: 1,
+            callback: (value) => data.days[value] || value,
+          },
+          title: { display: true, text: 'Day of Week' },
+        },
+      },
+    },
+  });
+}
+
+// Create Engagement Metrics Chart
+function createEngagementChart(data) {
+  const ctx = document.getElementById('engagementChart');
+  if (!ctx) return;
+
+  if (charts.engagement) {
+    charts.engagement.destroy();
+  }
+
+  if (!data) {
+    ctx.parentElement.innerHTML =
+      '<div class="empty-state"><h3>No engagement data</h3><p>Create competitions to see engagement metrics</p></div>';
+    return;
+  }
+
+  charts.engagement = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['Competitions', 'Participants', 'Rounds', 'Results', 'Completion Rate'],
+      datasets: [{
+        label: 'Engagement Metrics',
+        data: [
+          data.overview.totalCompetitions,
+          data.overview.totalParticipants,
+          data.overview.totalRounds,
+          data.overview.totalResults,
+          data.engagement.completionRate,
+        ],
+        backgroundColor: 'rgba(155, 89, 182, 0.2)',
+        borderColor: 'rgba(155, 89, 182, 1)',
+        borderWidth: 2,
+        pointBackgroundColor: 'rgba(155, 89, 182, 1)',
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: 'rgba(155, 89, 182, 1)',
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+      },
+      scales: {
+        r: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 10,
+          },
+        },
+      },
+    },
+  });
+}
+
+// Export data function
+function exportData(type) {
+  const token = checkAuth();
+  if (!token) return;
+
+  const link = document.createElement('a');
+  link.href = `/api/analytics/export?type=${type}`;
+  link.setAttribute('download', '');
+  link.style.display = 'none';
+
+  // Add authorization header
+  fetch(`/api/analytics/export?type=${type}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  .then(response => response.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  })
+  .catch(error => {
+    console.error('Export failed:', error);
+    showError('Failed to export data. Please try again.');
+  });
+}
+
 
 // Period selector change handler
 document.getElementById('periodSelector').addEventListener('change', () => {
   loadAnalytics();
+});
+
+// Export button event listeners
+document.getElementById('exportOverviewBtn').addEventListener('click', () => {
+  exportData('overview');
+});
+
+document.getElementById('exportCompetitionsBtn').addEventListener('click', () => {
+  exportData('competitions');
+});
+
+document.getElementById('exportParticipantsBtn').addEventListener('click', () => {
+  exportData('participants');
+});
+
+document.getElementById('exportTrendsBtn').addEventListener('click', () => {
+  exportData('trends');
 });
 
 // Load analytics on page load
