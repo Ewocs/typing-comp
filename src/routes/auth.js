@@ -7,6 +7,12 @@ const logger = require('../config/logger');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 
+
+const sendMail = require('../utils/sendMail');
+
+
+
+
 const router = express.Router();
 
 /* ===========================
@@ -127,6 +133,113 @@ router.post(
     const token = generateToken(organizer);
 
     logger.info(`✓ New organizer registered: ${email}`);
+    // 📧 Send welcome email (non-blocking)
+    sendMail({
+  to: organizer.email,
+  subject: "🎉 Welcome to Typing Platform — Your Organizer Account is Ready",
+  html: `
+  <div style="
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    background-color: #f4f6f8;
+    padding: 30px;
+  ">
+    <div style="
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      overflow: hidden;
+    ">
+      
+      <!-- Header -->
+      <div style="
+        background: linear-gradient(135deg, #4f46e5, #3b82f6);
+        color: #ffffff;
+        padding: 28px;
+        text-align: center;
+      ">
+        <h1 style="margin: 0; font-size: 26px;">Typing Platform</h1>
+        <p style="margin: 8px 0 0; font-size: 15px; opacity: 0.9;">
+          Organizer Dashboard Access
+        </p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 32px;">
+        <h2 style="margin-top: 0; color: #111827;">
+          Welcome, ${organizer.name} 👋
+        </h2>
+
+        <p style="font-size: 15px; color: #374151; line-height: 1.6;">
+          Your <strong>Organizer account</strong> has been successfully created.
+          You can now create, manage, and monitor typing competitions with ease.
+        </p>
+
+        <div style="
+          background-color: #f9fafb;
+          border-left: 4px solid #4f46e5;
+          padding: 16px;
+          margin: 24px 0;
+          border-radius: 6px;
+        ">
+          <p style="margin: 0; font-size: 14px; color: #111827;">
+            🚀 <strong>What's next?</strong><br/>
+            • Create competitions<br/>
+            • Manage participants<br/>
+            • Track results in real time
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:3000/organizer"
+             style="
+               display: inline-block;
+               padding: 14px 26px;
+               background-color: #4f46e5;
+               color: #ffffff;
+               text-decoration: none;
+               border-radius: 8px;
+               font-weight: 600;
+               font-size: 15px;
+             ">
+            Go to Organizer Dashboard
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #4b5563;">
+          If you have any questions or need help, feel free to reach out to our
+          support team anytime.
+        </p>
+
+        <p style="font-size: 14px; color: #4b5563; margin-bottom: 0;">
+          Happy Typing! 🚀<br/>
+          <strong>Typing Platform Team</strong>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="
+        background-color: #f3f4f6;
+        text-align: center;
+        padding: 16px;
+        font-size: 12px;
+        color: #6b7280;
+      ">
+        © ${new Date().getFullYear()} Typing Platform. All rights reserved.
+      </div>
+
+    </div>
+  </div>
+  `,
+}).catch(err => {
+  logger.error("Email sending failed", {
+    email: organizer.email,
+    error: err.message,
+  });
+});
+
+
 
     res.status(201).json({
       success: true,

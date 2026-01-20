@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.example') }); 
+
 const app = require('./app');
 const http = require('http');
 const mongoose = require('mongoose');
@@ -12,12 +14,23 @@ const io = socketIo(server, {
 
 require('./socket/events')(io);
 
+//MongoDB Atlas connection
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => {
+    logger.info('✓ MongoDB connected');
+  })
+  .catch((err) => {
+    logger.error('❌ MongoDB error:', err);
+  });
+
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, '0.0.0.0', () => {
   logger.info(`🚀 Server running on http://localhost:${PORT}`);
 });
 
+// Graceful shutdown
 const gracefulShutdown = async (signal) => {
   logger.info(`${signal} received: closing HTTP server and Database connection`);
 
