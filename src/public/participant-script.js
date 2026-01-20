@@ -552,19 +552,15 @@ socket.on('roundStarted', (data) => {
   typedChars = [];
   totalErrors = 0;
   backspaceCount = 0;
-  backspaceCount = 0;
   errorIndices.clear();
   keyStats = {};
   lastKeystrokeTime = 0;
 
-  lobbyScreen.classList.add('hidden');
-  resultsScreen.classList.add('hidden');
-  completionScreen.classList.add('hidden');
-  testScreen.classList.remove('hidden');
+  manageScreenFocus('testScreen');
 
   typingInput.value = '';
   typingInput.disabled = false;
-  typingInput.focus();
+  // Focus will be managed by manageScreenFocus
 
   updateTextDisplay('');
   wpmDisplay.textContent = '0';
@@ -579,11 +575,7 @@ socket.on('roundEnded', (data) => {
   isTestInProgress = false;
   typingInput.disabled = true;
 
-  // Play round complete sound
-  playSound('round-complete');
-
-  testScreen.classList.add('hidden');
-  resultsScreen.classList.remove('hidden');
+  manageScreenFocus('resultsScreen');
 
   const personalResult = data.leaderboard.find(
     item => item.name === participantName
@@ -667,11 +659,7 @@ socket.on('finalResults', () => {
   }
 
   // Default behavior
-  joinScreen.classList.add('hidden');
-  lobbyScreen.classList.add('hidden');
-  testScreen.classList.add('hidden');
-  resultsScreen.classList.add('hidden');
-  completionScreen.classList.remove('hidden');
+  manageScreenFocus('completionScreen');
 });
 
 socket.on('disconnect', () => {

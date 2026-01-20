@@ -1,6 +1,15 @@
 const loginForm = document.getElementById('loginForm');
-    const loginBtn = document.getElementById('loginBtn');
-    const errorMessage = document.getElementById('errorMessage');
+const loginBtn = document.getElementById('loginBtn');
+const errorMessage = document.getElementById('errorMessage');
+
+// Focus management for login page
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-focus first input field
+  const emailInput = document.getElementById('email');
+  if (emailInput) {
+    emailInput.focus();
+  }
+});
 
     function showError(message) {
       errorMessage.textContent = message;
